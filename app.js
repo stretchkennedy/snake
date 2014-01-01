@@ -66,6 +66,12 @@ function newTail() {
     return ret
 }
 
+function snakeLost(id) {
+    io.sockets.emit('lose', {id: id})
+    delete snakes[id]
+    numSnakes--
+}
+
 io.sockets.on('connection', function (socket) {
     var id = maxID++
     sockets[id] = socket
@@ -83,14 +89,19 @@ io.sockets.on('connection', function (socket) {
                 }],
             d: snakeTail.d,
             newDir: snakeTail.d,
-            changed: false,
+            changed: true,
             elongating: 3
         }
 
     numSnakes++
 
-    // inform new player of snakes
+    // inform new player of existing snakes
     socket.emit('create', {snakes: snakes, fruit: fruit})
+    
+    // inform existing players of new snake
+    var newSnakes = {}
+    newSnakes[id] = snakes[id]
+    socket.broadcast.emit('create', {snakes: newSnakes})
 
     socket.on('turn', function (params) {
         if (!(id in snakes))
@@ -105,75 +116,25 @@ io.sockets.on('connection', function (socket) {
         snakes[id].newDir = newDir
     })
     socket.on('disconnect', function (params) {
-        socket.broadcast.emit('delete', {id: id})
-        delete snakes[id]
+        snakeLost(id)
     })
 })
 
-var tick = 300
-function update() {
-    function pointIsEqual(a, b) {
-        return (a.y == b.y && a.x == b.x)
-    }
-    function collision() {
-        var bodies = new Array()
-        var heads = []
-        // precollision
-        for (var num in snakes) {
-            var snake = snakes[num]
-            bodies = bodies.concat(snake.pieces.slice(1))
-        }
-        // collision
-        for (var num in snakes) {
-            var snake = snakes[num]
-            // collide bodies with heads
-            for (var i = 0; i < bodies.length; i++) {
-                if (pointIsEqual(snake.pieces[0], bodies[i]))
-                    snake.dead = true
-            }
-            // collide heads with heads
-            for (var num2 in snakes) {
-                if (num == num2)
-                    continue
-                snake2 = snakes[num2]
-                if (pointIsEqual(snake.pieces[0], snake2.pieces[0])) {
-                    snake.dead = true
-                    snake2.dead = true
-                }
-            }
-            // collide fruit with heads
-            for (var i = 0; i < fruit.length; i++) {
-                if (pointIsEqual(snake.pieces[0], fruit[i])) {
-                    snake.elongating += 1
-                    snake.changed = true
-                    fruit.splice(i, 1)
-                }
-            }
-        }
-        // postcollision
-        for (var num in snakes) {
-            var snake = snakes[num]
-            if (snake.dead) {
-                delete snakes[num]
-                delete changed[num]
-                io.sockets.emit('lose', {id: num})
-                numSnakes--
-            }
-        }
-    }
-    
-    var changed = {}
+
+function pointIsEqual(a, b) {
+    return (a.y == b.y && a.x == b.x)
+}
+
+function updatePosition() {
     for (var num in snakes) {
         var snake = snakes[num]
 
         // broadcast unpredictable changes
-        if (snake.d != snake.newDir || snake.changed) {
-            changed[num] = snake
+        if (snake.d != snake.newDir) {
+            snake.changed = true
+            snake.d = snake.newDir
         }
-
-        snake.changed = false
-        snake.d = snake.newDir
-
+        
         // grow snake's head
         var head = snake.pieces[0]
         if (snake.d == 0)
@@ -193,18 +154,80 @@ function update() {
             snake.pieces.pop()
         }
     }
+}
+
+function collision() {
+    var bodies = new Array()
+    var heads = []
+    // precollision
+    for (var num in snakes) {
+        var snake = snakes[num]
+        bodies = bodies.concat(snake.pieces.slice(1))
+    }
+    // collision
+    for (var num in snakes) {
+        var snake = snakes[num]
+        // collide bodies with heads
+        for (var i = 0; i < bodies.length; i++) {
+            if (pointIsEqual(snake.pieces[0], bodies[i]))
+                snake.dead = true
+        }
+        // collide heads with heads
+        for (var num2 in snakes) {
+            if (num == num2)
+                continue
+            snake2 = snakes[num2]
+            if (pointIsEqual(snake.pieces[0], snake2.pieces[0])) {
+                snake.dead = true
+                snake2.dead = true
+            }
+        }
+        // collide fruit with heads
+        for (var i = 0; i < fruit.length; i++) {
+            if (pointIsEqual(snake.pieces[0], fruit[i])) {
+                snake.elongating += 1
+                snake.changed = true
+                fruit.splice(i, 1)
+            }
+        }
+    }
+    // postcollision
+    for (var num in snakes) {
+        var snake = snakes[num]
+        if (snake.dead) {
+            snakeLost(num)
+        }
+    }
+}
+
+function changedSnakes() {
+    var changed = {}
+    for (var num in snakes) {
+        snake = snakes[num]
+        if(snake.changed) {
+            changed[num] = snake
+            snake.changed = false
+        }
+    }
+    return changed
+}
+
+var tick = 300
+function update() {
+    updatePosition()
     collision()
     io.sockets.emit('update',
         {
-            snakes: changed,
+            snakes: changedSnakes(),
             fruit: fruit
         })
 }
 setInterval(update, tick)
 
-var spawnFruitInterval = 4000
+function spawnFruitInterval() { return 4000 / Math.sqrt(numSnakes + 1) }
 function spawnFruit() {
     if (fruit.length < numSnakes)
         fruit.push({x: getRandomInt(width), y:getRandomInt(height)})
+    setTimeout(spawnFruit, spawnFruitInterval())
 }
-setInterval(spawnFruit, spawnFruitInterval)
+setTimeout(spawnFruit, spawnFruitInterval())

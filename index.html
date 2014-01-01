@@ -90,6 +90,8 @@
                 width = params['width']
                 height = params['height']
                 id = params['id']
+                snakes = {}
+                fruit = {}
                 $("#myID").html('<p>' + id + '</p>')
                 $('div#game').html('')
                 for(var y = 0; y < height; y++) {
@@ -102,17 +104,24 @@
                         div.appendTo(row)
                     }
                 }
-            })
-            
-            socket.on('create', function (params) {
-                snakes = params['snakes']
-                fruit = params['fruit']
-                updateView()
                 registerKeys()
             })
             
+            function mergeSnakes(newSnakes) {
+                for (num in newSnakes) {
+                    snakes[num] = newSnakes[num]
+                }
+            }
+            
+            socket.on('create', function (params) {
+                mergeSnakes(params['snakes'])
+                if ('fruit' in params)
+                    fruit = params['fruit']
+                updateView()
+            })
+            
             socket.on('update', function (params) {
-                $.extend(true, snakes, params['snakes'])
+                mergeSnakes(params['snakes'])
                 
                 var changed = []
                 for(num in params['snakes']) { changed.push(num) }
@@ -141,13 +150,13 @@
             })
         </script>
         <div class="container">
+            <div id="game">
+            </div>
             <div id="myID">
             </div>
             <div id="messageBox">
             </div>
             <br/>
-            <div id="game">
-            </div>
         </div>
     </body>
 </html>
