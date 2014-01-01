@@ -69,7 +69,6 @@ function newTail() {
 function snakeLost(id) {
     io.sockets.emit('lose', {id: id})
     delete snakes[id]
-    numSnakes--
 }
 
 io.sockets.on('connection', function (socket) {
@@ -117,6 +116,7 @@ io.sockets.on('connection', function (socket) {
     })
     socket.on('disconnect', function (params) {
         snakeLost(id)
+        numSnakes--
     })
 })
 
@@ -226,7 +226,7 @@ setInterval(update, tick)
 
 function spawnFruitInterval() { return 4000 / Math.sqrt(numSnakes + 1) }
 function spawnFruit() {
-    if (fruit.length < numSnakes)
+    if (fruit.length < 2 * numSnakes)
         fruit.push({x: getRandomInt(width), y:getRandomInt(height)})
     setTimeout(spawnFruit, spawnFruitInterval())
 }
