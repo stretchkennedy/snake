@@ -1,0 +1,44 @@
+#myID {
+	float: left;
+}
+#messageBox {
+	float: right;
+}
+#game div.tile {
+	position:relative;
+	z-index:0;
+	background:black;
+	width:10px;
+	height:10px;
+	float:left;
+	border: 1px solid white;
+}
+#game div.you {
+	z-index:30;
+	background:green;
+}
+#game div.them {
+	z-index:20;
+	background:red;
+}
+#game div.row {
+	clear:both;
+}
+#game div.fruit {
+	z-index:10;
+	background:yellow;
+	border: 1px solid yellow;
+}
+body {
+	background:white;
+}
+p {
+	font:bold 18px arial;
+}
+.message {
+	font-style:italic;
+	color:grey;
+}
+.container {
+	display:inline-block;
+}

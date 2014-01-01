@@ -37,6 +37,10 @@ app.get('/jquery/jquery.min.map', function (req, res) {
     return serveFile(req, res, path.join('node_modules', 'jquery', 'dist', 'jquery.min.map'))
 })
 
+app.get('/style.css', function (req, res) {
+    return serveFile(req, res, 'style.css')
+})
+
 var width = 20
 var height = 20
 
@@ -92,10 +96,8 @@ io.sockets.on('connection', function (socket) {
         if (!(id in snakes))
             return
 
-        console.log("turn params: " + params.toString())
         newDir = (Math.round(Number(params['d']) / 90) * 90).mod(360)
         // either 0, 90, 180, or 27
-        console.log("newDir:" + newDir)
         if([0, 90, 180, 270].indexOf(newDir) == -1) return
         // not a reversal
         if(newDir == (snakes[id].d + 180).mod(360)) return
@@ -158,7 +160,7 @@ function collision() {
     }
 }
 
-var tick = 500
+var tick = 300
 function update() {
     var changed = {}
     for (var num in snakes) {
