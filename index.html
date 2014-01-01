@@ -1,0 +1,144 @@
+<html>
+	<body>
+		<style>
+			#myID {
+				float: left;
+			}
+			#messageBox {
+				float: left;
+			}
+			#game div.tile {
+				position:relative;
+				z-index:0;
+				background:black;
+				width:10px;
+				height:10px;
+				float:left;
+				border: 1px solid white;
+			}
+			#game div.you {
+				z-index:30;
+				background:green;
+			}
+			#game div.them {
+				z-index:20;
+				background:red;
+			}
+			#game div.row {
+				clear:both;
+			}
+			#game div.fruit {
+				z-index:10;
+				background:yellow;
+				border: 1px solid yellow;
+			}
+			body {
+				background:white;
+			}
+			p {
+				font:bold 18px arial;
+			}
+			.message {
+				font-style:italic;
+				color:grey;
+			}
+		</style>
+		<script src=/socket.io/socket.io.js></script>
+		<script src=/jquery/jquery.min.js></script>
+		<script>		
+			var socket = io.connect(location.protocol + '//' + location.host)
+			var id
+			var snakes
+			var fruit
+			
+			function registerKeys() {
+				var larrow = 37
+				var left = 180
+				var uarrow = 38
+				var up = 90
+				var rarrow = 39
+				var right = 0
+				var darrow = 40
+				var down = 270
+				$(document).keydown(function (event) {
+					var d
+					if (event.which == larrow)
+						d = left
+					else if (event.which == rarrow)
+						d = right
+					else if (event.which == darrow)
+						d = down
+					else if (event.which == uarrow)
+						d = up
+					if (d != undefined) socket.emit('turn', {d: d})
+				})
+			}
+			
+			function tilediv(x, y) {
+				return $('.x' + x + '.y' + y)
+			}
+			
+			function updateView() {
+				$('div#game div.tile').removeClass('you them fruit')
+				for (sid in snakes) {
+					var snake = snakes[sid]
+					var cname = 'them'
+					if (sid == id) cname = 'you'
+					for (var i = 0; i < snake.pieces.length; i++) {
+						var x = snake.pieces[i].x
+						var y = snake.pieces[i].y
+						tilediv(x, y).addClass(cname)
+					}
+					for (var i = 0; i < fruit.length; i++) {
+						tilediv(fruit[i].x, fruit[i].y).addClass('fruit')
+					}
+				}
+			}
+			
+			socket.on('accept', function (params) {
+				id = params['id']
+				$("#myID").html('<p>' + id + '</p>')
+				$('div#game').html('')
+				for(var y = 0; y < params['width']; y++) {
+					var row = $('<div/>', {class: 'row'})
+					row.appendTo($('div#game'))
+					for(var x = 0; x < params['height']; x++) {
+						var div = $('<div/>', {class: 'tile'})
+						div.addClass('x' + x)
+						div.addClass('y' + y)
+						div.appendTo(row)
+					}
+				}
+			})
+			
+			socket.on('create', function (params) {
+				console.log(params)
+				snakes = params['snakes']
+				fruit = params['fruit']
+				updateView()
+				registerKeys()
+			})
+			
+			socket.on('update', function (params) {
+				snakes = params['snakes']
+				fruit = params['fruit']
+				updateView()
+			})
+			
+			socket.on('lose', function (params) {
+				$('<p>You Lost</p>')
+				.appendTo($('div#messageBox'))
+				.delay(1000)
+				.fadeOut(1000, function() {
+					this.remove()
+				})
+			})
+		</script>
+		<div id="myID">
+		</div>
+		<div id="messageBox">
+		</div>
+		<div id="game">
+		</div>
+	</body>
+</html>
