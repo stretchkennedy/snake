@@ -105,16 +105,17 @@ function spawnSnake(id) {
 
     numSnakes++
 
-    // inform existing players of new snake
+    // inform players of new snake
     var newSnakes = {}
     newSnakes[id] = snakes[id]
     io.sockets.emit('create', {snakes: newSnakes})
+    sockets[id].emit('spawn', {id: id})
 }
 
 io.sockets.on('connection', function (socket) {
     var id = maxID++
     sockets[id] = socket
-    socket.emit('accept', {id: id, width: width, height: height})
+    socket.emit('accept', {width: width, height: height})
     
     spawnSnake(id)
     
@@ -122,8 +123,7 @@ io.sockets.on('connection', function (socket) {
     socket.emit('create', {snakes: snakes, fruit: fruit})
 
     socket.on('turn', function (params) {
-        if (!(id in snakes))
-            return
+        if (!(id in snakes)) return
 
         newDir = (Math.round(Number(params['d']) / 90) * 90).mod(360)
         // either 0, 90, 180, or 27
@@ -132,6 +132,11 @@ io.sockets.on('connection', function (socket) {
         if(newDir == (snakes[id].d + 180).mod(360)) return
 
         snakes[id].newDir = newDir
+    })
+    socket.on('respawn', function (params) {
+        if(id in snakes) return
+        console.log('rec respawn')
+        spawnSnake(id)
     })
     socket.on('disconnect', function (params) {
         playerDisconnected(id)

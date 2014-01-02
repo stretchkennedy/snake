@@ -40,6 +40,10 @@
                 })
             }
             
+            function unregisterKeys() {
+                $(document).off('keydown')
+            }
+            
             function tilediv(x, y) {
                 return $('.x' + x + '.y' + y)
             }
@@ -98,10 +102,8 @@
             socket.on('accept', function (params) {
                 width = params['width']
                 height = params['height']
-                id = params['id']
                 snakes = {}
                 fruit = {}
-                $("#myID").html('<p>' + id + '</p>')
                 $('div#game').html('')
                 for(var y = 0; y < height; y++) {
                     var row = $('<div/>', {class: 'row'})
@@ -121,6 +123,14 @@
                     snakes[num] = newSnakes[num]
                 }
             }
+            
+            socket.on('spawn', function (params) {
+                $('.menu').hide()
+                $('#game').removeClass("faded")
+                id = params['id']
+                $("#myID").html('<p>' + id + '</p>')
+                console.log('spawn called')
+            })
             
             socket.on('create', function (params) {
                 mergeSnakes(params['snakes'])
@@ -147,6 +157,8 @@
                 lostid = params['id']
                 var player = 'Player ' + lostid
                 if (lostid == id) {
+                    $('.menu').show()
+                    $('#game').addClass("faded")
                     player = 'You'
                 }
                 print(player + ' Died')
@@ -155,16 +167,23 @@
             
             socket.on('left', function (params) {
                 leftid = params['id']
-                var player = 'Player ' + leftid
-                if (leftid == id) {
-                    player = 'You'
-                }
-                print(player + ' Left')
+                print('Player ' + leftid + ' Left')
                 delete snakes[leftid]
             })
+            
+            $(document).ready(function() {
+                $('.respawn').click(function() {
+                    socket.emit('respawn')
+                })
+            })
         </script>
+        <div class="menu">
+            <div class="respawn button">
+                <p>Respawn</p>
+            </div>
+        </div>
         <div class="container">
-            <div id="game">
+            <div id="game" class="faded">
             </div>
             <div id="myID">
             </div>

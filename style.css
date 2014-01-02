@@ -42,3 +42,17 @@ p {
 .container {
 	display:inline-block;
 }
+.button {
+    position:absolute;
+    margin:4px;
+    padding:4px;
+    border:2px solid black;
+    background:#333333;
+    color:#FFFFFF;
+    z-index:100;
+    float:right;
+    clear:both;
+}
+.faded {
+    opacity:0.2;
+}
