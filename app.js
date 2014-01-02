@@ -69,16 +69,24 @@ function newTail() {
     return ret
 }
 
-function snakeLost(id) {
-    io.sockets.emit('lose', {id: id})
+function snakeDied(id) {
+    io.sockets.emit('die', {id: id})
     delete snakes[id]
+    numSnakes--
 }
 
-io.sockets.on('connection', function (socket) {
-    var id = maxID++
-    sockets[id] = socket
-    // set id of new player
-    socket.emit('accept', {id: id, width: width, height: height})
+function playerDisconnected(id) {
+    io.sockets.emit('left', {id: id})
+    if(snakes[id]) {
+        delete snakes[id]
+        numSnakes--
+    }
+    delete sockets[id]
+}
+
+function spawnSnake(id) {
+    if (snakes[id]) return
+    
     snakeTail = newTail()
     snakes[id] =
         {
@@ -97,13 +105,21 @@ io.sockets.on('connection', function (socket) {
 
     numSnakes++
 
-    // inform new player of existing snakes
-    socket.emit('create', {snakes: snakes, fruit: fruit})
-    
     // inform existing players of new snake
     var newSnakes = {}
     newSnakes[id] = snakes[id]
-    socket.broadcast.emit('create', {snakes: newSnakes})
+    io.sockets.emit('create', {snakes: newSnakes})
+}
+
+io.sockets.on('connection', function (socket) {
+    var id = maxID++
+    sockets[id] = socket
+    socket.emit('accept', {id: id, width: width, height: height})
+    
+    spawnSnake(id)
+    
+    // inform new player of existing snakes
+    socket.emit('create', {snakes: snakes, fruit: fruit})
 
     socket.on('turn', function (params) {
         if (!(id in snakes))
@@ -118,8 +134,7 @@ io.sockets.on('connection', function (socket) {
         snakes[id].newDir = newDir
     })
     socket.on('disconnect', function (params) {
-        snakeLost(id)
-        numSnakes--
+        playerDisconnected(id)
     })
 })
 
@@ -198,7 +213,7 @@ function collision() {
     for (var num in snakes) {
         var snake = snakes[num]
         if (snake.dead) {
-            snakeLost(num)
+            snakeDied(num)
         }
     }
 }

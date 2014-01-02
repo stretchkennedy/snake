@@ -86,6 +86,15 @@
                 }
             }
             
+            function print(message) {
+                $('<p>' + message + '</p>')
+                .appendTo($('div#messageBox'))
+                .delay(2000)
+                .fadeOut(1000, function() {
+                    this.remove()
+                })
+            }
+            
             socket.on('accept', function (params) {
                 width = params['width']
                 height = params['height']
@@ -134,19 +143,24 @@
                 updateView()
             })
             
-            socket.on('lose', function (params) {
+            socket.on('die', function (params) {
                 lostid = params['id']
-                var message = 'Player ' + lostid + ' Lost'
+                var player = 'Player ' + lostid
                 if (lostid == id) {
-                    message = 'You Lost'
+                    player = 'You'
                 }
-                $('<p>' + message + '</p>')
-                .appendTo($('div#messageBox'))
-                .delay(1000)
-                .fadeOut(1000, function() {
-                    this.remove()
-                })
+                print(player + ' Died')
                 delete snakes[lostid]
+            })
+            
+            socket.on('left', function (params) {
+                leftid = params['id']
+                var player = 'Player ' + leftid
+                if (leftid == id) {
+                    player = 'You'
+                }
+                print(player + ' Left')
+                delete snakes[leftid]
             })
         </script>
         <div class="container">
