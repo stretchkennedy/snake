@@ -4,8 +4,10 @@ var app = require('express')()
     , fs = require('fs')
     , url = require('url')
     , path = require('path')
+    , port = process.env.PORT || 5000
 
-server.listen(process.argv[2])
+server.listen(port)
+console.log('listening on port ' + port)
 io.set('log level', 1)
 
 Number.prototype.mod = function(n) {
