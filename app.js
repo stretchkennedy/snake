@@ -1,3 +1,10 @@
+if(process.env.NODETIME_ACCOUNT_KEY) {
+  require('nodetime').profile({
+    accountKey: process.env.NODETIME_ACCOUNT_KEY,
+    appName: 'sk-node-snake' // optional
+  });
+}
+
 var app = require('express')()
     , server = require('http').createServer(app)
     , io = require('socket.io').listen(server)

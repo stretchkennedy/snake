@@ -1,11 +1,12 @@
 {
-	"name": "snake",
-	"description": "MMOSNAKE",
-	"version": "0.0.1",
-	"private": true,
-	"dependencies": {
-		"socket.io": "*",
-		"express": "3.x",
-		"jquery": "*"		
-	}
+  "name": "snake",
+  "description": "MMOSNAKE",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "socket.io": "*",
+    "express": "3.x",
+    "jquery": "*",
+    "nodetime": "~0.8.15"
+  }
 }
