@@ -113,6 +113,8 @@ function spawnSnake(id) {
 }
 
 io.sockets.on('connection', function (socket) {
+    console.log(socket.handshake.address.address + ' connected')
+
     var id = maxID++
     sockets[id] = socket
     socket.emit('accept', {width: width, height: height})
@@ -135,11 +137,11 @@ io.sockets.on('connection', function (socket) {
     })
     socket.on('respawn', function (params) {
         if(id in snakes) return
-        console.log('rec respawn')
         spawnSnake(id)
     })
     socket.on('disconnect', function (params) {
         playerDisconnected(id)
+        console.log(socket.handshake.address.address + ' disconnected')
     })
 })
 

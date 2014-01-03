@@ -11,7 +11,7 @@
 	width:10px;
 	height:10px;
 	float:left;
-	border: 1px solid white;
+	border: 1px solid black;
 }
 #game div.you {
 	z-index:30;
@@ -27,7 +27,6 @@
 #game div.fruit {
 	z-index:10;
 	background:yellow;
-	border: 1px solid yellow;
 }
 body {
 	background:white;
