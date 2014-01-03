@@ -10,6 +10,7 @@
             var id
             var snakes
             var fruit
+            var kills = 0
             var width = 0
             var height = 0
             
@@ -73,8 +74,26 @@
                 }
             }
             
+            function updateKills() {
+                $('#kills').html('<p>Kills: ' + kills + '</p>')
+            }
+            
+            function addBoard() {
+                $('div#board').html('')
+                for(var y = 0; y < height; y++) {
+                    var row = $('<div/>', {class: 'row'})
+                    row.appendTo($('div#board'))
+                    for(var x = 0; x < height; x++) {
+                        var div = $('<div/>', {class: 'tile'})
+                        div.addClass('x' + x)
+                        div.addClass('y' + y)
+                        div.appendTo(row)
+                    }
+                }
+            }
+            
             function updateView() {
-                $('div#game div.tile').removeClass('you them fruit')
+                $('div#board div.tile').removeClass('you them fruit')
                 for (sid in snakes) {
                     var snake = snakes[sid]
                     var cname = 'them'
@@ -102,19 +121,9 @@
             socket.on('accept', function (params) {
                 width = params['width']
                 height = params['height']
+                addBoard()
                 snakes = {}
                 fruit = {}
-                $('div#game').html('')
-                for(var y = 0; y < height; y++) {
-                    var row = $('<div/>', {class: 'row'})
-                    row.appendTo($('div#game'))
-                    for(var x = 0; x < height; x++) {
-                        var div = $('<div/>', {class: 'tile'})
-                        div.addClass('x' + x)
-                        div.addClass('y' + y)
-                        div.appendTo(row)
-                    }
-                }
                 registerKeys()
             })
             
@@ -125,6 +134,8 @@
             }
             
             socket.on('spawn', function (params) {
+                kills = 0
+                updateKills()
                 $('.menu').hide()
                 $('#game').removeClass("faded")
                 id = params['id']
@@ -153,12 +164,18 @@
             })
             
             socket.on('die', function (params) {
+                console.log(params)
                 lostid = params['id']
+                killerid = params['killer']
                 var player = 'Player ' + lostid
                 if (lostid == id) {
                     $('.menu').show()
                     $('#game').addClass("faded")
                     player = 'You'
+                }
+                else if (killerid == id) {
+                    kills++
+                    updateKills()
                 }
                 print(player + ' Died')
                 delete snakes[lostid]
@@ -181,14 +198,14 @@
                 <p>Respawn</p>
             </div>
         </div>
-        <div class="container">
-            <div id="game" class="faded">
-            </div>
-            <div id="myID">
-            </div>
-            <div id="messageBox">
-            </div>
+        <div id="game" class="faded">
+            <div id="board"></div>
             <br/>
+            <div id="myID"></div>
+            <div id="kills">
+                <p>Kills: 0</p>
+            </div>
         </div>
+        <div id="messageBox"></div>
     </body>
 </html>

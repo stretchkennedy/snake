@@ -79,7 +79,16 @@ function newTail() {
 }
 
 function snakeDied(id) {
-    io.sockets.emit('die', {id: id})
+    var message
+    var killer = snakes[id].killer
+    if (killer && killer != id) {
+        message = {id: id, killer: killer}
+        killer.kills++
+    }
+    else {
+        message = {id: id}
+    }
+    io.sockets.emit('die', message)
     delete snakes[id]
     numSnakes--
 }
@@ -100,6 +109,7 @@ function spawnSnake(id) {
     snakes[id] =
         {
             id: id,
+            kills: 0,
             name: id.toString(),
             pieces:
                 [{
@@ -196,32 +206,35 @@ function collision() {
     // precollision
     for (var num in snakes) {
         var snake = snakes[num]
-        bodies = bodies.concat(snake.pieces.slice(1))
     }
     // collision
     for (var num in snakes) {
-        var snake = snakes[num]
-        // collide bodies with heads
-        for (var i = 0; i < bodies.length; i++) {
-            if (pointIsEqual(snake.pieces[0], bodies[i]))
-                snake.dead = true
-        }
-        // collide heads with heads
         for (var num2 in snakes) {
+            var snake = snakes[num]
+            var snake2 = snakes[num2]
+            // collide bodies with heads
+            pieces2 = snake2.pieces.slice(1)
+            for (var i = 0; i < pieces2.length; i++) {
+                if (pointIsEqual(snake.pieces[0], pieces2[i])) {
+                    snake.dead = true
+                    snake.killer = num2
+                }
+            }
+            // collide fruit with heads
+            for (var i = 0; i < fruit.length; i++) {
+                if (pointIsEqual(snake.pieces[0], fruit[i])) {
+                    snake.elongating += 1
+                    snake.changed = true
+                    fruit.splice(i, 1)
+                }
+            }
+            // stop a snake colliding with its own head
             if (num == num2)
                 continue
-            snake2 = snakes[num2]
+            // collide heads with heads
             if (pointIsEqual(snake.pieces[0], snake2.pieces[0])) {
                 snake.dead = true
-                snake2.dead = true
-            }
-        }
-        // collide fruit with heads
-        for (var i = 0; i < fruit.length; i++) {
-            if (pointIsEqual(snake.pieces[0], fruit[i])) {
-                snake.elongating += 1
-                snake.changed = true
-                fruit.splice(i, 1)
+                snake.killer = num2
             }
         }
     }
