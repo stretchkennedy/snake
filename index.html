@@ -195,21 +195,21 @@
             socket.on('die', function (params) {
                 var lostid = params['id']
                 var lostname = names[lostid]
-                var killerid = params['killer']
+                var killerid = params['killer'] || lostid
                 var killername = names[killerid]
                 var message = killername
                 if (lostid == id) {
                     $('.menu').show()
                     $('#board').addClass("faded")
                     lostname = 'you'
-                    if (killerid == id) {
-                        killername = 'yourself'
-                    }
                 }
-                else if (killerid == id) {
+                if (killerid == id) {
                     kills++
                     updateKills()
                     killername = 'you'
+                    if (lostid == id) {
+                        lostname = 'yourself'
+                    }
                 }
                 print(killername + ' killed ' + lostname)
                 delete snakes[lostid]
@@ -217,7 +217,7 @@
             socket.on('left', function (params) {
                 var leftid = params['id']
                 var name = names[leftid]
-                print(name + ' Left')
+                print(name + ' left')
                 delete snakes[leftid]
             })
             socket.on('renamed', function (params) {
