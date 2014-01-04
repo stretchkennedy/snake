@@ -12,6 +12,7 @@ var app = require('express')()
     , url = require('url')
     , path = require('path')
     , port = process.env.PORT || 5000
+    , S = require('string')
 
 server.listen(port)
 console.log('listening on port ' + port)
@@ -44,13 +45,17 @@ app.get('/index.htm', index)
 app.get('/jquery/jquery.min.js', function (req, res) {
     return serveFile(req, res, path.join('node_modules', 'jquery', 'dist', 'jquery.min.js'))
 })
-
 app.get('/jquery/jquery.min.map', function (req, res) {
     return serveFile(req, res, path.join('node_modules', 'jquery', 'dist', 'jquery.min.map'))
 })
-
 app.get('/style.css', function (req, res) {
     return serveFile(req, res, 'style.css')
+})
+app.get('/jquery/jquery.caret.js', function (req, res) {
+    return serveFile(req, res, 'jquery.caret.js')
+})
+app.get('/string/string.min.js', function (req, res) {
+    return serveFile(req, res, path.join('node_modules', 'string', 'lib', 'string.min.js'))
 })
 
 var width = 20
@@ -60,6 +65,7 @@ var maxID = 0
 
 var snakes = {}
 var sockets = {}
+var names = {}
 var fruit = []
 
 var numSnakes = 0
@@ -67,7 +73,6 @@ var numSnakes = 0
 function getRandomInt(max) {
     return Math.floor(Math.random() * (max));
 }
-
 function newTail() {
     var ret =
         {
@@ -77,7 +82,6 @@ function newTail() {
         }
     return ret
 }
-
 function snakeDied(id) {
     var message
     var killer = snakes[id].killer
@@ -92,7 +96,6 @@ function snakeDied(id) {
     delete snakes[id]
     numSnakes--
 }
-
 function playerDisconnected(id) {
     io.sockets.emit('left', {id: id})
     if(snakes[id]) {
@@ -101,7 +104,6 @@ function playerDisconnected(id) {
     }
     delete sockets[id]
 }
-
 function spawnSnake(id) {
     if (snakes[id]) return
     
@@ -109,8 +111,8 @@ function spawnSnake(id) {
     snakes[id] =
         {
             id: id,
+            name: names[id],
             kills: 0,
-            name: id.toString(),
             pieces:
                 [{
                     x: snakeTail.x,
@@ -130,14 +132,21 @@ function spawnSnake(id) {
     io.sockets.emit('create', {snakes: newSnakes})
     sockets[id].emit('spawn', {id: id})
 }
+function renamePlayer(id, name) {
+    names[id] = S(name).escapeHTML().s
+    io.sockets.emit('renamed', {
+        id: id,
+        names: names
+    })
+}
 
 io.sockets.on('connection', function (socket) {
     console.log(socket.handshake.address.address + ' connected')
 
     var id = maxID++
     sockets[id] = socket
-    socket.emit('accept', {width: width, height: height})
-    
+    socket.emit('accept', {id: id, width: width, height: height})
+    renamePlayer(id, 'Player ' + id)
     spawnSnake(id)
     
     // inform new player of existing snakes
@@ -162,13 +171,17 @@ io.sockets.on('connection', function (socket) {
         playerDisconnected(id)
         console.log(socket.handshake.address.address + ' disconnected')
     })
+    socket.on('rename', function (params) {
+        renamePlayer(id, params['name'])
+    })
+    socket.on('msg', function (params) {
+        io.sockets.emit('msged', { id: id, m: S(params['m']).escapeHTML().s })
+    })
 })
-
 
 function pointIsEqual(a, b) {
     return (a.y == b.y && a.x == b.x)
 }
-
 function updatePosition() {
     for (var num in snakes) {
         var snake = snakes[num]
@@ -199,7 +212,6 @@ function updatePosition() {
         }
     }
 }
-
 function collision() {
     var bodies = new Array()
     var heads = []
@@ -246,7 +258,6 @@ function collision() {
         }
     }
 }
-
 function changedSnakes() {
     var changed = {}
     for (var num in snakes) {

@@ -5,10 +5,13 @@
     <body>
         <script src=/socket.io/socket.io.js></script>
         <script src=/jquery/jquery.min.js></script>
+        <script src=/jquery/jquery.caret.js></script>
+        <script src=/string/string.min.js></script>
         <script>        
             var socket = io.connect(location.protocol + '//' + location.host)
             var id
             var snakes
+            var names = {}
             var fruit
             var kills = 0
             var width = 0
@@ -27,7 +30,10 @@
                 var right = 0
                 var darrow = 40
                 var down = 270
+                
+                var enter = 13
                 $(document).keydown(function (event) {
+                    // send turn event
                     var d
                     if (event.which == larrow)
                         d = left
@@ -37,7 +43,27 @@
                         d = down
                     else if (event.which == uarrow)
                         d = up
-                    if (d != undefined) socket.emit('turn', {d: d})
+                    if (d != undefined) {
+                        socket.emit('turn', {d: d})
+                    }
+                })
+                $('.textbox').keydown(function (event) {
+                    if (event.which == larrow ||
+                        event.which == rarrow ||
+                        event.which == uarrow ||
+                        event.which == darrow) {
+                        // return caret to end of box
+                        event.preventDefault()
+                    }
+                })
+                $('.textbox').keyup(function (event) {
+                    // return caret to end of box
+                    $(this).caretToEnd()
+                })
+                $('#messageInput').keydown(function (event) {
+                    if (event.which == enter) {
+                        socket.emit('msg', {m: $('#messageInput').val()})
+                    }
                 })
             }
             
@@ -79,10 +105,11 @@
             }
             
             function addBoard() {
-                $('div#board').html('')
+                board = $('div#board')
+                board.html('')
                 for(var y = 0; y < height; y++) {
                     var row = $('<div/>', {class: 'row'})
-                    row.appendTo($('div#board'))
+                    row.appendTo(board)
                     for(var x = 0; x < height; x++) {
                         var div = $('<div/>', {class: 'tile'})
                         div.addClass('x' + x)
@@ -90,11 +117,12 @@
                         div.appendTo(row)
                     }
                 }
+                board.append($('<div class="clear"></div>'))
             }
             
             function updateView() {
                 $('div#board div.tile').removeClass('you them fruit')
-                for (sid in snakes) {
+                for (var sid in snakes) {
                     var snake = snakes[sid]
                     var cname = 'them'
                     if (sid == id) cname = 'you'
@@ -109,13 +137,15 @@
                 }
             }
             
+            function renameSnake() {
+                $("#name").val(names[id])
+            }
+            
             function print(message) {
-                $('<p>' + message + '</p>')
-                .appendTo($('div#messageBox'))
-                .delay(2000)
-                .fadeOut(1000, function() {
-                    this.remove()
-                })
+                $('<p class="message">' + S(message).escapeHTML().s + '</p>')
+                    .appendTo($('div#messageBox'))
+                var msgdiv = $('#messageBox')
+                msgdiv[0].scrollTop = msgdiv[0].scrollHeight
             }
             
             socket.on('accept', function (params) {
@@ -124,6 +154,7 @@
                 addBoard()
                 snakes = {}
                 fruit = {}
+                id = params['id']
                 registerKeys()
             })
             
@@ -137,9 +168,7 @@
                 kills = 0
                 updateKills()
                 $('.menu').hide()
-                $('#game').removeClass("faded")
-                id = params['id']
-                $("#myID").html('<p>' + id + '</p>')
+                $('#board').removeClass("faded")
             })
             
             socket.on('create', function (params) {
@@ -164,48 +193,74 @@
             })
             
             socket.on('die', function (params) {
-                console.log(params)
                 lostid = params['id']
                 killerid = params['killer']
-                var player = 'Player ' + lostid
+                var player = names[lostid]
                 if (lostid == id) {
                     $('.menu').show()
-                    $('#game').addClass("faded")
+                    $('#board').addClass("faded")
                     player = 'You'
                 }
                 else if (killerid == id) {
                     kills++
                     updateKills()
                 }
-                print(player + ' Died')
+                print(player + ' died')
                 delete snakes[lostid]
             })
-            
             socket.on('left', function (params) {
-                leftid = params['id']
-                print('Player ' + leftid + ' Left')
+                var leftid = params['id']
+                var name = snakes[leftid].name || 'Player ' + leftid
+                print(name + ' Left')
                 delete snakes[leftid]
+            })
+            socket.on('renamed', function (params) {
+                names = params['names']
+                if (params['id'] == id) {
+                    renameSnake()
+                }
+            })
+            socket.on('msged', function (params) {
+                var mid = params['id']
+                var name = names[mid] || mid
+                var msg = params['m']
+                print('<' + name + '>: ' + msg)
             })
             
             $(document).ready(function() {
                 $('.respawn').click(function() {
                     socket.emit('respawn')
                 })
+                
+                $('#name').change(function() {
+                    socket.emit('rename', {name: $('#name').val()})
+                })
             })
         </script>
-        <div class="menu">
-            <div class="respawn button">
-                <p>Respawn</p>
+        <div>
+            <div class="menu">
+                <div class="respawn button">
+                    <p>Respawn</p>
+                </div>
+            </div>
+            <div id="game">
+                <div id="board"></div>
+                <div class="clear"></div>
+                <div>
+                    <div class="inputContainer">
+                        <input type="text" class="textbox" id="name"/>
+                    </div>
+                    <div id="kills">
+                        <p>Kills: 0</p>
+                    </div>
+                </div>
+            </div>
+            <div id="messageContainer">
+                <div id="messageBox"></div>
+                <div class="inputContainer">
+                    <input type="text" class="textbox" id="messageInput"/>
+                </div>
             </div>
         </div>
-        <div id="game" class="faded">
-            <div id="board"></div>
-            <br/>
-            <div id="myID"></div>
-            <div id="kills">
-                <p>Kills: 0</p>
-            </div>
-        </div>
-        <div id="messageBox"></div>
     </body>
 </html>

@@ -1,12 +1,32 @@
-#myID {
+#name {
 	float: left;
+    width:100px;
+    padding-left:4px;
 }
 #kills {
     float: right;
+    margin:0px;
+    padding-right:4px;
+}
+.inputContainer {
+    float:left;
+    margin:0px;
+}
+.textbox {
+    margin:0px;
+}
+#messageContainer {
+	float: left;
+    max-height:272px;
+    max-width:240px;
 }
 #messageBox {
-	float: left;
-    margin:10px;
+    overflow-y:scroll;
+    height:240px;
+    width:100%;
+}
+#messageInput {
+    width: 100%;
 }
 #game {
     z-index:0;
@@ -42,11 +62,15 @@ body {
 }
 p {
 	font:bold 18px arial;
+    padding:3px;
+    margin:0px;
+}
+input[type="text"] {
+    font:bold 18px arial;
 }
 .message {
-	font-style:italic;
+	font:italic 14px arial;
 	color:grey;
-    text-align: center;
 }
 .container {
 	display:inline-block;
@@ -67,4 +91,7 @@ p {
 }
 .faded {
     opacity:0.2;
+}
+.clear {
+    clear: both;
 }
