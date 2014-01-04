@@ -194,22 +194,30 @@
             
             socket.on('die', function (params) {
                 var lostid = params['id']
-                var lostname = names[lostid]
                 var killerid = params['killer'] || lostid
+                // on an unconnected kill
+                var lostname = names[lostid]
                 var killername = names[killerid]
                 var message = killername
+                // on your death
                 if (lostid == id) {
                     $('.menu').show()
                     $('#board').addClass("faded")
                     lostname = 'you'
                 }
+                // on your kill
                 if (killerid == id) {
                     kills++
                     updateKills()
                     killername = 'you'
+                    // on your suicide
                     if (lostid == id) {
                         lostname = 'yourself'
                     }
+                }
+                // on someone else's suicide 
+                else if(killerid == lostid) {
+                    lostname = 'himself'
                 }
                 print(killername + ' killed ' + lostname)
                 delete snakes[lostid]
