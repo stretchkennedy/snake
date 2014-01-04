@@ -65,10 +65,19 @@
                         $(this).val('')
                     }
                 })
+                $('.respawn').click(function() {
+                    socket.emit('respawn')
+                })
+                
+                $('#name').change(function() {
+                    socket.emit('rename', {name: $('#name').val()})
+                })
             }
             
             function unregisterKeys() {
-                $(document).off('keydown')
+                $(document).off()
+                $(window).off()
+                $('*').off()
             }
             
             function tilediv(x, y) {
@@ -240,15 +249,8 @@
                 var msg = params['m']
                 print('&lt;' + name + '&gt;: ' + msg)
             })
-            
-            $(document).ready(function() {
-                $('.respawn').click(function() {
-                    socket.emit('respawn')
-                })
-                
-                $('#name').change(function() {
-                    socket.emit('rename', {name: $('#name').val()})
-                })
+            socket.on('disconnect', function(params) {
+                unregisterKeys()
             })
         </script>
         <div>
