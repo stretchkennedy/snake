@@ -6,7 +6,6 @@
         <script src=/socket.io/socket.io.js></script>
         <script src=/jquery/jquery.min.js></script>
         <script src=/jquery/jquery.caret.js></script>
-        <script src=/string/string.min.js></script>
         <script>        
             var socket = io.connect(location.protocol + '//' + location.host)
             var id
@@ -143,7 +142,7 @@
             }
             
             function print(message) {
-                $('<p class="message">' + S(message).escapeHTML().s + '</p>')
+                $('<p class="message">' + message + '</p>')
                     .appendTo($('div#messageBox'))
                 var msgdiv = $('#messageBox')
                 msgdiv[0].scrollTop = msgdiv[0].scrollHeight
@@ -231,7 +230,7 @@
                 var mid = params['id']
                 var name = names[mid] || mid
                 var msg = params['m']
-                print('<' + name + '>: ' + msg)
+                print('&lt;' + name + '&gt;: ' + msg)
             })
             
             $(document).ready(function() {

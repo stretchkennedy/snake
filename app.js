@@ -54,9 +54,6 @@ app.get('/style.css', function (req, res) {
 app.get('/jquery/jquery.caret.js', function (req, res) {
     return serveFile(req, res, 'jquery.caret.js')
 })
-app.get('/string/string.min.js', function (req, res) {
-    return serveFile(req, res, path.join('node_modules', 'string', 'lib', 'string.min.js'))
-})
 
 var width = 20
 var height = 20
