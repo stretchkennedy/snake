@@ -81,10 +81,11 @@ function newTail() {
 }
 function snakeDied(id) {
     var message
-    var killer = snakes[id].killer
-    if (killer && killer != id) {
-        message = {id: id, killer: killer}
+    var killer = snakes[snakes[id].killer]
+    if (killer && killer.id != id) {
+        message = {id: id, killer: killer.id}
         killer.kills++
+        killer.elongating += 1
     }
     else {
         message = {id: id}
@@ -203,6 +204,7 @@ function updatePosition() {
         // shorten snake's tail
         if (snake.elongating > 0) {
             snake.elongating -= 1
+            snake.changed = true
         }
         else {
             snake.pieces.pop()
@@ -210,7 +212,6 @@ function updatePosition() {
     }
 }
 function collision() {
-    var bodies = new Array()
     var heads = []
     // precollision
     for (var num in snakes) {
