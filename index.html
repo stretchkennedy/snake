@@ -62,7 +62,8 @@
                 })
                 $('#messageInput').keydown(function (event) {
                     if (event.which == enter) {
-                        socket.emit('msg', {m: $('#messageInput').val()})
+                        socket.emit('msg', {m: $(this).val()})
+                        $(this).val('')
                     }
                 })
             }
@@ -193,24 +194,30 @@
             })
             
             socket.on('die', function (params) {
-                lostid = params['id']
-                killerid = params['killer']
-                var player = names[lostid]
+                var lostid = params['id']
+                var lostname = names[lostid]
+                var killerid = params['killer']
+                var killername = names[killerid]
+                var message = killername
                 if (lostid == id) {
                     $('.menu').show()
                     $('#board').addClass("faded")
-                    player = 'You'
+                    lostname = 'you'
+                    if (killerid == id) {
+                        killername = 'yourself'
+                    }
                 }
                 else if (killerid == id) {
                     kills++
                     updateKills()
+                    killername = 'you'
                 }
-                print(player + ' died')
+                print(killername + ' killed ' + lostname)
                 delete snakes[lostid]
             })
             socket.on('left', function (params) {
                 var leftid = params['id']
-                var name = snakes[leftid].name || 'Player ' + leftid
+                var name = names[leftid]
                 print(name + ' Left')
                 delete snakes[leftid]
             })
