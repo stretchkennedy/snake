@@ -32,10 +32,7 @@ function serveFile(req, res, filename) {
 }
 
 function index(req, res) {
-    if (process.argv[3] == 'm')
-        return serveFile(req, res, 'maint.html')
-    else
-        return serveFile(req, res, 'index.html')
+    return serveFile(req, res, 'index.html')
 }
 
 app.get('/', index)
