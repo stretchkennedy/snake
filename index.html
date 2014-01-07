@@ -176,6 +176,7 @@
                 snakes = {}
                 fruit = {}
                 id = params['id']
+                renameSnake()
                 registerKeys()
             })
             socket.on('connect', function (params) {
@@ -206,6 +207,8 @@
                 mergeSnakes(params['snakes'])
                 if ('fruit' in params)
                     fruit = params['fruit']
+                if ('names' in params)
+                    names = params['names']
                 updateView()
             })
             socket.on('update', function (params) {
@@ -258,8 +261,12 @@
                 delete snakes[leftid]
             })
             socket.on('renamed', function (params) {
-                names = params['names']
-                if (params['id'] == id) {
+                var rid = params['id']
+                if (rid == undefined) {
+                    return
+                }
+                names[rid] = params['name']
+                if (rid == id) {
                     renameSnake()
                 }
             })
