@@ -157,6 +157,12 @@
                 msgdiv[0].scrollTop = msgdiv[0].scrollHeight
             }
             
+            function mergeSnakes(newSnakes) {
+                for (num in newSnakes) {
+                    snakes[num] = newSnakes[num]
+                }
+            }
+
             socket.on('accept', function (params) {
                 width = params['width']
                 height = params['height']
@@ -166,27 +172,36 @@
                 id = params['id']
                 registerKeys()
             })
-            
-            function mergeSnakes(newSnakes) {
-                for (num in newSnakes) {
-                    snakes[num] = newSnakes[num]
-                }
-            }
-            
+            socket.on('connect', function (params) {
+                print('connected to server')
+            })
+            socket.on('connecting', function (params) {
+                print('connecting...')
+            })
+            socket.on('connect_failed', function (params) {
+                print('failed to connect')
+            })
+            socket.on('disconnect', function (params) {
+                print('lost connection')
+            })
+            socket.on('reconnecting', function (params) {
+                print('attempting to reconnect...')
+            })
+            socket.on('reconnect_failed', function (params) {
+                print('failed to reconnect')
+            })
             socket.on('spawn', function (params) {
                 kills = 0
                 updateKills()
                 $('.menu').hide()
                 $('#board').removeClass("faded")
             })
-            
             socket.on('create', function (params) {
                 mergeSnakes(params['snakes'])
                 if ('fruit' in params)
                     fruit = params['fruit']
                 updateView()
             })
-            
             socket.on('update', function (params) {
                 mergeSnakes(params['snakes'])
                 
@@ -200,7 +215,6 @@
                 fruit = params['fruit']
                 updateView()
             })
-            
             socket.on('die', function (params) {
                 var lostid = params['id']
                 var killerid = params['killer'] || lostid
