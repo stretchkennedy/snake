@@ -142,6 +142,7 @@ io.sockets.on('connection', function (socket) {
     sockets[id] = socket
     socket.emit('accept', {id: id, width: width, height: height})
     renamePlayer(id, 'Player ' + id)
+    socket.broadcast.emit('joined', {id: id})
     spawnSnake(id)
     
     // inform new player of existing snakes

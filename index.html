@@ -162,7 +162,13 @@
                     snakes[num] = newSnakes[num]
                 }
             }
-
+            
+            socket.on('joined', function (params) {
+                var jid = params['id']
+                if (jid && names[jid]) {
+                    print('<b>' + names[jid] + '</b> joined the game')
+                }
+            })
             socket.on('accept', function (params) {
                 width = params['width']
                 height = params['height']
@@ -219,8 +225,8 @@
                 var lostid = params['id']
                 var killerid = params['killer'] || lostid
                 // on an unconnected kill
-                var lostname = names[lostid]
-                var killername = names[killerid]
+                var lostname = '<b>' + names[lostid] + '</b>'
+                var killername = '<b>' + names[killerid] + '</b>'
                 var message = killername
                 // on your death
                 if (lostid == id) {
@@ -248,7 +254,7 @@
             socket.on('left', function (params) {
                 var leftid = params['id']
                 var name = names[leftid]
-                print(name + ' left')
+                print('<b>' + name + '</b> left the game')
                 delete snakes[leftid]
             })
             socket.on('renamed', function (params) {
@@ -261,7 +267,7 @@
                 var mid = params['id']
                 var name = names[mid] || mid
                 var msg = params['m']
-                print('&lt;' + name + '&gt;: ' + msg)
+                print('<b>' + name + '</b>: ' + msg)
             })
             socket.on('disconnect', function(params) {
                 unregisterKeys()
