@@ -218,12 +218,14 @@
                 }
                 // on your kill
                 if (killerid == id) {
-                    kills++
                     updateKills()
                     killername = 'you'
                     // on your suicide
                     if (lostid == id) {
                         lostname = 'yourself'
+                    }
+                    else {
+                        kills++
                     }
                 }
                 // on someone else's suicide 

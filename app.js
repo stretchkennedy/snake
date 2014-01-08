@@ -173,8 +173,10 @@ function Player (board, socket) {
     }
     this.disconnected = function () {
         io.sockets.emit('left', {id: player.id})
+        if (player.snake) {
+            board.numSnakes--
+        }
         delete board.players[player.id]
-        board.numSnakes--
     }
     
     // register player to receive messages
