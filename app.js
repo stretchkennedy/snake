@@ -233,6 +233,64 @@ function Board(w, h) {
     this.fruit = []
     
     // methods
+    var _safeSpaces
+    this.safeSpaces = function() {
+        if (_safeSpaces) {
+            return _safeSpaces
+        }
+        
+        // find unsafe spaces
+        var unsafe = []
+        for (pid in board.players) {
+            var snake = board.players[pid].snake
+            if (!snake) {
+                continue
+            }
+            unsafe = unsafe.concat(snake.pieces)
+        }
+        
+        // init grid
+        var grid = new Array(board.width)
+        for (var x = 0; x < board.width; x++) {
+            grid[x] = new Array(board.height)
+            for (var y = 0; y < board.height; y++) {
+                grid[x][y] = true
+            }
+        }
+        
+        // mark unsafe spaces in grid
+        for (var i = 0; i < unsafe.length; i++) {
+            var u = unsafe[i]
+            grid[u.x][u.y] = false
+        }
+        
+        _safeSpaces = []
+        // retrieve safe spaces
+        for (var x = 0; x < board.width; x++) {
+            for (var y = 0; y < board.height; y++) {
+                if (grid[x][y]) {
+                    _safeSpaces.push({
+                        x: x,
+                        y: y
+                    })
+                }
+            }
+        }
+        
+        return _safeSpaces
+    }
+    this.getSafeSpace = function() {
+        var safeSpaces = board.safeSpaces()
+        if (!safeSpaces || safeSpaces.length == 0) {
+            return {
+                    x: getRandomInt(board.width),
+                    y: getRandomInt(board.height),
+                }
+        }
+        else {
+            return safeSpaces[getRandomInt(safeSpaces.length)]
+        }
+    }
     this.allNames = function() {
         var names = {}
         for (var pid in board.players) {
@@ -261,10 +319,11 @@ function Board(w, h) {
         return changed
     }
     this.newTail = function() {
+        var safe = board.getSafeSpace()
         var ret =
             {
-                x: getRandomInt(board.width),
-                y: getRandomInt(board.height),
+                x: safe.x,
+                y: safe.y,
                 d: 0
             }
         return ret
@@ -276,7 +335,7 @@ function Board(w, h) {
     function spawnFruitInterval() { return 4000 / Math.sqrt(board.numSnakes + 1) }
     function spawnFruit() {
         if (board.fruit.length < 2 * board.numSnakes) {
-            board.fruit.push({x: getRandomInt(board.width), y:getRandomInt(board.height)})
+            board.fruit.push(board.getSafeSpace())
         }
         setTimeout(spawnFruit, spawnFruitInterval())
     }
@@ -341,6 +400,8 @@ function Board(w, h) {
     // main loop
     var tick = 300
     function update() {
+        // invalidate safe spawning spaces
+        _safeSpaces = undefined
         updatePosition()
         collision()
         io.sockets.emit('update',
@@ -350,8 +411,6 @@ function Board(w, h) {
             })
     }
     setInterval(update, tick)
-    
-    return this
 }
 
 var board = new Board(20, 20)
