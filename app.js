@@ -100,10 +100,9 @@ function Snake(board, player, pos) {
         return {
             pieces: snake.pieces,
         }
+    }
     
     this.grow = function() {
-        
-    
         var head = snake.pieces[0]
         if (snake.d == 0)
             snake.pieces.unshift({x: (head.x + 1).mod(board.width), y: head.y})
