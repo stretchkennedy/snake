@@ -83,31 +83,6 @@
             function tilediv(x, y) {
                 return $('.x' + x + '.y' + y)
             }
-
-            function updateSnakes(ids) {
-                for (var i = 0; i < ids.length; i++) {
-                    var snake = snakes[ids[i]]
-                    
-                    // grow snake's head
-                    var head = snake.pieces[0]
-                    if (snake.d == 0)
-                        snake.pieces.unshift({x: (head.x + 1).mod(width), y: head.y})
-                    else if(snake.d == 90)
-                        snake.pieces.unshift({x: head.x, y: (head.y - 1).mod(height)})
-                    else if(snake.d == 180)
-                        snake.pieces.unshift({x: (head.x - 1).mod(width), y: head.y})
-                    else if(snake.d == 270)
-                        snake.pieces.unshift({x: head.x, y: (head.y + 1).mod(height)})
-                    
-                    // shorten snake's tail
-                    if (snake.elongating > 0) {
-                        snake.elongating -= 1
-                    }
-                    else {
-                        snake.pieces.pop()
-                    }
-                }
-            }
             
             function updateKills() {
                 $('#kills').html('<p>Kills: ' + kills + '</p>')
@@ -157,12 +132,6 @@
                 msgdiv[0].scrollTop = msgdiv[0].scrollHeight
             }
             
-            function mergeSnakes(newSnakes) {
-                for (num in newSnakes) {
-                    snakes[num] = newSnakes[num]
-                }
-            }
-            
             socket.on('joined', function (params) {
                 var jid = params['id']
                 if (jid && names[jid]) {
@@ -204,7 +173,13 @@
                 $('#board').removeClass("faded")
             })
             socket.on('create', function (params) {
-                mergeSnakes(params['snakes'])
+                var newSnakes = params['snakes']
+                for (num in newSnakes) {
+                    snakes[num] = {}
+                    if (newSnakes[num].pieces) {
+                        snakes[num].pieces = newSnakes[num].pieces
+                    }
+                }
                 if ('fruit' in params)
                     fruit = params['fruit']
                 if ('names' in params)
@@ -212,14 +187,18 @@
                 updateView()
             })
             socket.on('update', function (params) {
-                mergeSnakes(params['snakes'])
-                
-                var changed = []
-                for(num in params['snakes']) { changed.push(num) }
-                var all = []
-                for(num in snakes) { all.push(num) }
-                var unchanged = $(all).not(changed).get();
-                updateSnakes(unchanged)
+                var newSnakes = params['snakes']
+                for (num in newSnakes) {
+                    if (newSnakes[num].head) {
+                        snakes[num].pieces.unshift(newSnakes[num].head)
+                    }
+                    if (!newSnakes[num].grow) {
+                        snakes[num].pieces.pop()
+                    }
+                    else {
+                        console.log('grew')
+                    }
+                }
                 
                 fruit = params['fruit']
                 updateView()

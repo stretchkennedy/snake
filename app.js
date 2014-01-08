@@ -54,32 +54,78 @@ Number.prototype.mod = function(n) {
 function pointIsEqual(a, b) {
     return (a.y == b.y && a.x == b.x)
 }
+function getRandomInt(max) {
+    return Math.floor(Math.random() * (max));
+}
 
-function Snake(player, pos) {
+function Snake(board, player, pos) {
     if (player.snake) return
-    snakeTail = pos
+    var snake = this
+    var snakeTail = pos
     this.pieces = [{
         x: snakeTail.x,
-        y: snakeTail.y
+        y: snakeTail.y,
+        changed: true
     }]
     this.d = snakeTail.d
     this.newDir = snakeTail.d
     this.changed = true
     this.elongating = 3
+    this.growing = true
+    this.update = function() {
+        snake.d = snake.newDir
+        
+        // grow snake's head
+        snake.grow()
+        snake.growing = (snake.elongating > 0)
+        
+        // shorten snake's tail
+        if (snake.growing) {
+            snake.elongating--
+        }
+        else {
+            snake.pieces.pop()
+        }
+    }
     this.died = function() {
         player.snakeDied()
     }
+    this.forUpdate = function() {
+        return {
+            head: snake.pieces[0],
+            grow: snake.growing
+        }
+    }
+    this.forCreate = function() {
+        return {
+            pieces: snake.pieces,
+        }
     
-    game.numSnakes++
+    this.grow = function() {
+        
+    
+        var head = snake.pieces[0]
+        if (snake.d == 0)
+            snake.pieces.unshift({x: (head.x + 1).mod(board.width), y: head.y})
+        else if(snake.d == 90)
+            snake.pieces.unshift({x: head.x, y: (head.y - 1).mod(board.height)})
+        else if(snake.d == 180)
+            snake.pieces.unshift({x: (head.x - 1).mod(board.width), y: head.y})
+        else if(snake.d == 270)
+            snake.pieces.unshift({x: head.x, y: (head.y + 1).mod(board.height)})
+        snake.pieces[0].changed = true
+    }
+    
+    // constructor
+    board.numSnakes++
     player.snake = this
 
-    // inform players of new snake
     var newSnakes = {}
-    newSnakes[player.id] = player.snake
+    newSnakes[player.id] = player.snake.forCreate()
     io.sockets.emit('create', {snakes: newSnakes})
     player.socket.emit('spawn', {id: player.id})
 }
-function Player (game, socket) {
+function Player (board, socket) {
     
     // private
     var player = this
@@ -97,12 +143,12 @@ function Player (game, socket) {
         return _name
     }
     this.kills = 0
-    this.id = game.maxID++
+    this.id = board.maxID++
     this.socket = socket
     
     // methods
     this.spawnSnake = function() {
-        player.snake = new Snake(player, game.newTail())
+        player.snake = new Snake(board, player, board.newTail())
     }
     this.snakeDied = function() {
         if(!player.snake) {
@@ -110,7 +156,7 @@ function Player (game, socket) {
         }
         var message
         var kid = player.snake.killer
-        killer = game.players[kid]
+        killer = board.players[kid]
         if (kid != undefined && kid != player.id) {
             message = {id: player.id, killer: kid}
             killer.kills++
@@ -122,19 +168,19 @@ function Player (game, socket) {
             message = {id: player.id}
         }
         io.sockets.emit('die', message)
-        delete game.players[player.id].snake
+        delete board.players[player.id].snake
         delete player.snake
-        game.numSnakes--
+        board.numSnakes--
     }
-    this.disconnected = function (id) {
-        io.sockets.emit('left', {id: id})
-        delete game.players[id]
-        game.numSnakes--
+    this.disconnected = function () {
+        io.sockets.emit('left', {id: player.id})
+        delete board.players[player.id]
+        board.numSnakes--
     }
     
     // register player to receive messages
-    player.socket.on('turn', function (params) {
-        if (!(player.id in game.players)) return
+    this.socket.on('turn', function (params) {
+        if (!(player.id in board.players)) return
 
         var newDir = (Math.round(Number(params['d']) / 90) * 90).mod(360)
         // either 0, 90, 180, or 27
@@ -144,34 +190,40 @@ function Player (game, socket) {
 
         player.snake.newDir = newDir
     })
-    player.socket.on('respawn', function (params) {
+    this.socket.on('respawn', function (params) {
         if(player.snake) return
         player.spawnSnake()
     })
-    player.socket.on('disconnect', function (params) {
+    this.socket.on('disconnect', function (params) {
         player.disconnected()
         console.log(player.socket.handshake.address.address + ' disconnected')
     })
-    player.socket.on('rename', function (params) {
+    this.socket.on('rename', function (params) {
         player.name(params['name'])
     })
-    player.socket.on('msg', function (params) {
+    this.socket.on('msg', function (params) {
         io.sockets.emit('msged', { id: player.id, m: S(params['m']).escapeHTML().s })
     })
 
-    // register player with game
-    game.players[this.id] = this
+    // register player with board
+    board.players[this.id] = this
     
     // constructor
-    this.socket.emit('accept', {id: this.id, width: game.width, height: game.height})
+    this.socket.emit('accept', {id: this.id, width: board.width, height: board.height})
     this.socket.broadcast.emit('joined', {id: this.id})
     this.name('Player ' + this.id)
     this.spawnSnake()
-    this.socket.emit('create', {snakes: game.allSnakes(), fruit: game.fruit, names: game.allNames()})
+    this.socket.emit('create', 
+        {
+            snakes: board.snakesForCreate(), 
+            fruit: board.fruit, 
+            names: board.allNames()
+        }
+    )
 }
-function Game(w, h) {
+function Board(w, h) {
     // properties
-    var game = this
+    var board = this
     this.players = {}
     this.width = w
     this.height = h
@@ -180,27 +232,29 @@ function Game(w, h) {
     this.fruit = []
     
     // methods
-    this.allSnakes = function() {
-        var snakes = {}
-        for (var pid in game.players) {
-            snakes[pid] = game.players[pid].snake
-        }
-        return snakes
-    }
     this.allNames = function() {
         var names = {}
-        for (var pid in game.players) {
-            names[pid] = game.players[pid].name()
+        for (var pid in board.players) {
+            names[pid] = board.players[pid].name()
         }
         return names
     }
-    this.changedSnakes = function() {
+    this.snakesForCreate = function() {
+        var snakes = {}
+        for (var pid in board.players) {
+            var snake = board.players[pid].snake
+            if(snake) {
+                snakes[pid] = snake.forCreate()
+            }
+        }
+        return snakes
+    }
+    this.snakesForUpdate = function() {
         var changed = {}
-        for (var pid in game.players) {
-            var snake = game.players[pid].snake
-            if(snake && snake.changed) {
-                changed[pid] = snake
-                snake.changed = false
+        for (var pid in board.players) {
+            var snake = board.players[pid].snake
+            if(snake) {
+                changed[pid] = snake.forUpdate()
             }
         }
         return changed
@@ -208,20 +262,20 @@ function Game(w, h) {
     this.newTail = function() {
         var ret =
             {
-                x: getRandomInt(game.width),
-                y: getRandomInt(game.height),
+                x: getRandomInt(board.width),
+                y: getRandomInt(board.height),
                 d: 0
             }
         return ret
     }
     this.newPlayer = function(socket) {
-        return new Player(game, socket)
+        return new Player(board, socket)
     }
     // fruit spawning
-    function spawnFruitInterval() { return 4000 / Math.sqrt(game.numSnakes + 1) }
+    function spawnFruitInterval() { return 4000 / Math.sqrt(board.numSnakes + 1) }
     function spawnFruit() {
-        if (game.fruit.length < 2 * game.numSnakes) {
-            game.fruit.push({x: getRandomInt(game.width), y:getRandomInt(game.height)})
+        if (board.fruit.length < 2 * board.numSnakes) {
+            board.fruit.push({x: getRandomInt(board.width), y:getRandomInt(board.height)})
         }
         setTimeout(spawnFruit, spawnFruitInterval())
     }
@@ -229,55 +283,29 @@ function Game(w, h) {
     
     // logic
     function updatePosition() {
-        for (var pid in game.players) {
-            var snake = game.players[pid].snake
-            if (!snake) {
-                continue
-            }
-            // broadcast unpredictable changes
-            if (snake.d != snake.newDir) {
-                snake.changed = true
-                snake.d = snake.newDir
-            }
-            
-            // grow snake's head
-            var head = snake.pieces[0]
-            if (snake.d == 0)
-                snake.pieces.unshift({x: (head.x + 1).mod(game.width), y: head.y})
-            else if(snake.d == 90)
-                snake.pieces.unshift({x: head.x, y: (head.y - 1).mod(game.height)})
-            else if(snake.d == 180)
-                snake.pieces.unshift({x: (head.x - 1).mod(game.width), y: head.y})
-            else if(snake.d == 270)
-                snake.pieces.unshift({x: head.x, y: (head.y + 1).mod(game.height)})
-
-            // shorten snake's tail
-            if (snake.elongating > 0) {
-                snake.elongating -= 1
-                snake.changed = true
-            }
-            else {
-                snake.pieces.pop()
+        for (var pid in board.players) {
+            var snake = board.players[pid].snake
+            if (snake) {
+                snake.update()
             }
         }
     }
     function collision() {
         // collision
-        for (var pid1 in game.players) {
-            var snake1 = game.players[pid1].snake
+        for (var pid1 in board.players) {
+            var snake1 = board.players[pid1].snake
             if (!snake1) {
                 continue
             }
             // collide fruit with heads
-            for (var i = 0; i < game.fruit.length; i++) {
-                if (pointIsEqual(snake1.pieces[0], game.fruit[i])) {
+            for (var i = 0; i < board.fruit.length; i++) {
+                if (pointIsEqual(snake1.pieces[0], board.fruit[i])) {
                     snake1.elongating += 1
-                    snake1.changed = true
-                    game.fruit.splice(i, 1)
+                    board.fruit.splice(i, 1)
                 }
             }
-            for (var pid2 in game.players) {
-                var snake2 = game.players[pid2].snake
+            for (var pid2 in board.players) {
+                var snake2 = board.players[pid2].snake
                 if (!snake2) {
                     continue
                 }
@@ -301,8 +329,8 @@ function Game(w, h) {
             }
         }
         // postcollision
-        for (var pid in game.players) {
-            var snake = game.players[pid].snake
+        for (var pid in board.players) {
+            var snake = board.players[pid].snake
             if (snake && snake.dead) {
                 snake.died()
             }
@@ -316,8 +344,8 @@ function Game(w, h) {
         collision()
         io.sockets.emit('update',
             {
-                snakes: game.changedSnakes(),
-                fruit: game.fruit
+                snakes: board.snakesForUpdate(),
+                fruit: board.fruit
             })
     }
     setInterval(update, tick)
@@ -325,13 +353,9 @@ function Game(w, h) {
     return this
 }
 
-var game = new Game(20, 20)
-
-function getRandomInt(max) {
-    return Math.floor(Math.random() * (max));
-}
+var board = new Board(20, 20)
 
 io.sockets.on('connection', function (socket) {
     console.log(socket.handshake.address.address + ' connected')
-    game.newPlayer(socket)
+    board.newPlayer(socket)
 })
