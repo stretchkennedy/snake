@@ -179,7 +179,9 @@ function Player (board, socket) {
     
     // register player to receive messages
     this.socket.on('turn', function (params) {
-        if (!(player.id in board.players)) return
+        if (!player.snake) {
+            return
+        }
 
         var newDir = (Math.round(Number(params['d']) / 90) * 90).mod(360)
         // either 0, 90, 180, or 27
