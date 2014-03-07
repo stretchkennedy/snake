@@ -1,290 +1,290 @@
 <html>
-    <head>
-        <link rel="stylesheet" type="text/css" href="style.css"></link>
-    </head>
-    <body>
-        <script src=/socket.io/socket.io.js></script>
-        <script src=/jquery/jquery.min.js></script>
-        <script src=/jquery/jquery.caret.js></script>
-        <script>        
-            var socket = io.connect(location.protocol + '//' + location.host)
-            var id
-            var snakes
-            var names = {}
-            var fruit
-            var kills = 0
-            var width = 0
-            var height = 0
-            
-            Number.prototype.mod = function(n) {
-                return ((this%n)+n)%n;
-            }
-            
-            function registerKeys() {
-                var larrow = 37
-                var left = 180
-                var uarrow = 38
-                var up = 90
-                var rarrow = 39
-                var right = 0
-                var darrow = 40
-                var down = 270
-                
-                var enter = 13
-                $(document).keydown(function (event) {
-                    // send turn event
-                    var d
-                    if (event.which == larrow)
-                        d = left
-                    else if (event.which == rarrow)
-                        d = right
-                    else if (event.which == darrow)
-                        d = down
-                    else if (event.which == uarrow)
-                        d = up
-                    if (d != undefined) {
-                        socket.emit('turn', {d: d})
-                    }
-                })
-                $('.textbox').keydown(function (event) {
-                    if (event.which == larrow ||
-                        event.which == rarrow ||
-                        event.which == uarrow ||
-                        event.which == darrow) {
-                        // return caret to end of box
-                        event.preventDefault()
-                    }
-                })
-                $('.textbox').keyup(function (event) {
-                    // return caret to end of box
-                    $(this).caretToEnd()
-                })
-                $('#messageInput').keydown(function (event) {
-                    if (event.which == enter) {
-                        socket.emit('msg', {m: $(this).val()})
-                        $(this).val('')
-                    }
-                })
-                $('.respawn').click(function() {
-                    socket.emit('respawn')
-                })
-                
-                $('#name').change(function() {
-                    socket.emit('rename', {name: $('#name').val()})
-                })
-            }
-            
-            function unregisterKeys() {
-                $(document).off()
-                $(window).off()
-                $('*').off()
-            }
-            
-            function tilediv(x, y) {
-                return $('.x' + x + '.y' + y)
-            }
-            
-            function updateKills() {
-                $('#kills').html('<p>Kills: ' + kills + '</p>')
-            }
-            
-            function addBoard() {
-                board = $('div#board')
-                board.html('')
-                for(var y = 0; y < height; y++) {
-                    var row = $('<div/>', {class: 'row'})
-                    row.appendTo(board)
-                    for(var x = 0; x < height; x++) {
-                        var div = $('<div/>', {class: 'tile'})
-                        div.addClass('x' + x)
-                        div.addClass('y' + y)
-                        div.appendTo(row)
-                    }
-                }
-                board.append($('<div class="clear"></div>'))
-            }
-            
-            function updateView() {
-                $('div#board div.tile').removeClass('you them fruit')
-                for (var sid in snakes) {
-                    var snake = snakes[sid]
-                    var cname = 'them'
-                    if (sid == id) cname = 'you'
-                    for (var i = 0; i < snake.pieces.length; i++) {
-                        var x = snake.pieces[i].x
-                        var y = snake.pieces[i].y
-                        tilediv(x, y).addClass(cname)
-                    }
-                    for (var i = 0; i < fruit.length; i++) {
-                        tilediv(fruit[i].x, fruit[i].y).addClass('fruit')
-                    }
-                }
-            }
-            
-            function renameSnake() {
-                $("#name").val(names[id])
-            }
-            
-            function print(message) {
-                $('<p class="message">' + message + '</p>')
-                    .appendTo($('div#messageBox'))
-                var msgdiv = $('#messageBox')
-                msgdiv[0].scrollTop = msgdiv[0].scrollHeight
-            }
-            
-            socket.on('joined', function (params) {
-                var jid = params['id']
-                if (jid && names[jid]) {
-                    print('<b>' + names[jid] + '</b> joined the game')
-                }
-            })
-            socket.on('accept', function (params) {
-                width = params['width']
-                height = params['height']
-                addBoard()
-                snakes = {}
-                fruit = {}
-                id = params['id']
-                renameSnake()
-                registerKeys()
-            })
-            socket.on('connect', function (params) {
-                print('connected to server')
-            })
-            socket.on('connecting', function (params) {
-                print('connecting...')
-            })
-            socket.on('connect_failed', function (params) {
-                print('failed to connect')
-            })
-            socket.on('disconnect', function (params) {
-                print('lost connection')
-            })
-            socket.on('reconnecting', function (params) {
-                print('attempting to reconnect...')
-            })
-            socket.on('reconnect_failed', function (params) {
-                print('failed to reconnect')
-            })
-            socket.on('spawn', function (params) {
-                kills = 0
-                updateKills()
-                $('.menu').hide()
-                $('#board').removeClass("faded")
-            })
-            socket.on('create', function (params) {
-                var newSnakes = params['snakes']
-                for (num in newSnakes) {
-                    snakes[num] = {}
-                    if (newSnakes[num].pieces) {
-                        snakes[num].pieces = newSnakes[num].pieces
-                    }
-                }
-                if ('fruit' in params)
-                    fruit = params['fruit']
-                if ('names' in params)
-                    names = params['names']
-                updateView()
-            })
-            socket.on('update', function (params) {
-                var newSnakes = params['snakes']
-                for (num in newSnakes) {
-                    if (newSnakes[num].head) {
-                        snakes[num].pieces.unshift(newSnakes[num].head)
-                    }
-                    if (!newSnakes[num].grow) {
-                        snakes[num].pieces.pop()
-                    }
-                    else {
-                        console.log('grew')
-                    }
-                }
-                
-                fruit = params['fruit']
-                updateView()
-            })
-            socket.on('die', function (params) {
-                var lostid = params['id']
-                var killerid = params['killer'] || lostid
-                // on an unconnected kill
-                var lostname = '<b>' + names[lostid] + '</b>'
-                var killername = '<b>' + names[killerid] + '</b>'
-                var message = killername
-                // on your death
-                if (lostid == id) {
-                    $('.menu').show()
-                    $('#board').addClass("faded")
-                    lostname = 'you'
-                }
-                // on your kill
-                if (killerid == id) {
-                    updateKills()
-                    killername = 'you'
-                    // on your suicide
-                    if (lostid == id) {
-                        lostname = 'yourself'
-                    }
-                    else {
-                        kills++
-                    }
-                }
-                // on someone else's suicide 
-                else if(killerid == lostid) {
-                    lostname = 'himself'
-                }
-                print(killername + ' killed ' + lostname)
-                delete snakes[lostid]
-            })
-            socket.on('left', function (params) {
-                var leftid = params['id']
-                var name = names[leftid]
-                print('<b>' + name + '</b> left the game')
-                delete snakes[leftid]
-            })
-            socket.on('renamed', function (params) {
-                var rid = params['id']
-                if (rid == undefined) {
-                    return
-                }
-                names[rid] = params['name']
-                if (rid == id) {
-                    renameSnake()
-                }
-            })
-            socket.on('msged', function (params) {
-                var mid = params['id']
-                var name = names[mid] || mid
-                var msg = params['m']
-                print('<b>' + name + '</b>: ' + msg)
-            })
-            socket.on('disconnect', function(params) {
-                unregisterKeys()
-            })
-        </script>
-        <div>
-            <div class="menu">
-                <div class="respawn button">
-                    <p>Respawn</p>
-                </div>
-            </div>
-            <div id="game">
-                <div id="board"></div>
-                <div class="clear"></div>
-                <div>
-                    <div class="inputContainer">
-                        <input type="text" class="textbox" id="name"/>
-                    </div>
-                    <div id="kills">
-                        <p>Kills: 0</p>
-                    </div>
-                </div>
-            </div>
-            <div id="messageContainer">
-                <div id="messageBox"></div>
-                <div class="inputContainer">
-                    <input type="text" class="textbox" id="messageInput"/>
-                </div>
-            </div>
+  <head>
+    <link rel="stylesheet" type="text/css" href="style.css"></link>
+  </head>
+  <body>
+    <script src=/socket.io/socket.io.js></script>
+    <script src=/jquery/jquery.min.js></script>
+    <script src=/jquery/jquery.caret.js></script>
+    <script>        
+     var socket = io.connect(location.protocol + '//' + location.host)
+     var id
+     var snakes
+     var names = {}
+     var fruit
+     var kills = 0
+     var width = 0
+     var height = 0
+     
+     Number.prototype.mod = function(n) {
+       return ((this%n)+n)%n;
+     }
+     
+     function registerKeys() {
+       var larrow = 37
+       var left = 180
+       var uarrow = 38
+       var up = 90
+       var rarrow = 39
+       var right = 0
+       var darrow = 40
+       var down = 270
+       
+       var enter = 13
+       $(document).keydown(function (event) {
+         // send turn event
+         var d
+         if (event.which == larrow)
+         d = left
+         else if (event.which == rarrow)
+         d = right
+         else if (event.which == darrow)
+         d = down
+         else if (event.which == uarrow)
+         d = up
+         if (d != undefined) {
+           socket.emit('turn', {d: d})
+         }
+       })
+       $('.textbox').keydown(function (event) {
+         if (event.which == larrow ||
+             event.which == rarrow ||
+             event.which == uarrow ||
+             event.which == darrow) {
+           // return caret to end of box
+           event.preventDefault()
+         }
+       })
+       $('.textbox').keyup(function (event) {
+         // return caret to end of box
+         $(this).caretToEnd()
+       })
+       $('#messageInput').keydown(function (event) {
+         if (event.which == enter) {
+           socket.emit('msg', {m: $(this).val()})
+           $(this).val('')
+         }
+       })
+       $('.respawn').click(function() {
+         socket.emit('respawn')
+       })
+       
+       $('#name').change(function() {
+         socket.emit('rename', {name: $('#name').val()})
+       })
+     }
+     
+     function unregisterKeys() {
+       $(document).off()
+       $(window).off()
+       $('*').off()
+     }
+     
+     function tilediv(x, y) {
+       return $('.x' + x + '.y' + y)
+     }
+     
+     function updateKills() {
+       $('#kills').html('<p>Kills: ' + kills + '</p>')
+     }
+     
+     function addBoard() {
+       board = $('div#board')
+       board.html('')
+       for(var y = 0; y < height; y++) {
+         var row = $('<div/>', {class: 'row'})
+         row.appendTo(board)
+         for(var x = 0; x < height; x++) {
+           var div = $('<div/>', {class: 'tile'})
+           div.addClass('x' + x)
+           div.addClass('y' + y)
+           div.appendTo(row)
+         }
+       }
+       board.append($('<div class="clear"></div>'))
+     }
+     
+     function updateView() {
+       $('div#board div.tile').removeClass('you them fruit')
+       for (var sid in snakes) {
+         var snake = snakes[sid]
+         var cname = 'them'
+         if (sid == id) cname = 'you'
+         for (var i = 0; i < snake.pieces.length; i++) {
+           var x = snake.pieces[i].x
+           var y = snake.pieces[i].y
+           tilediv(x, y).addClass(cname)
+         }
+         for (var i = 0; i < fruit.length; i++) {
+           tilediv(fruit[i].x, fruit[i].y).addClass('fruit')
+         }
+       }
+     }
+     
+     function renameSnake() {
+       $("#name").val(names[id])
+     }
+     
+     function print(message) {
+       $('<p class="message">' + message + '</p>')
+				  .appendTo($('div#messageBox'))
+       var msgdiv = $('#messageBox')
+       msgdiv[0].scrollTop = msgdiv[0].scrollHeight
+     }
+     
+     socket.on('joined', function (params) {
+       var jid = params['id']
+       if (jid && names[jid]) {
+         print('<b>' + names[jid] + '</b> joined the game')
+       }
+     })
+     socket.on('accept', function (params) {
+       width = params['width']
+       height = params['height']
+       addBoard()
+       snakes = {}
+       fruit = {}
+       id = params['id']
+       renameSnake()
+       registerKeys()
+     })
+     socket.on('connect', function (params) {
+       print('connected to server')
+     })
+     socket.on('connecting', function (params) {
+       print('connecting...')
+     })
+     socket.on('connect_failed', function (params) {
+       print('failed to connect')
+     })
+     socket.on('disconnect', function (params) {
+       print('lost connection')
+     })
+     socket.on('reconnecting', function (params) {
+       print('attempting to reconnect...')
+     })
+     socket.on('reconnect_failed', function (params) {
+       print('failed to reconnect')
+     })
+     socket.on('spawn', function (params) {
+       kills = 0
+       updateKills()
+       $('.menu').hide()
+       $('#board').removeClass("faded")
+     })
+     socket.on('create', function (params) {
+       var newSnakes = params['snakes']
+       for (num in newSnakes) {
+         snakes[num] = {}
+         if (newSnakes[num].pieces) {
+           snakes[num].pieces = newSnakes[num].pieces
+         }
+       }
+       if ('fruit' in params)
+       fruit = params['fruit']
+       if ('names' in params)
+       names = params['names']
+       updateView()
+     })
+     socket.on('update', function (params) {
+       var newSnakes = params['snakes']
+       for (num in newSnakes) {
+         if (newSnakes[num].head) {
+           snakes[num].pieces.unshift(newSnakes[num].head)
+         }
+         if (!newSnakes[num].grow) {
+           snakes[num].pieces.pop()
+         }
+         else {
+           console.log('grew')
+         }
+       }
+       
+       fruit = params['fruit']
+       updateView()
+     })
+     socket.on('die', function (params) {
+       var lostid = params['id']
+       var killerid = params['killer'] || lostid
+       // on an unconnected kill
+       var lostname = '<b>' + names[lostid] + '</b>'
+       var killername = '<b>' + names[killerid] + '</b>'
+       var message = killername
+       // on your death
+       if (lostid == id) {
+         $('.menu').show()
+         $('#board').addClass("faded")
+         lostname = 'you'
+       }
+       // on your kill
+       if (killerid == id) {
+         updateKills()
+         killername = 'you'
+         // on your suicide
+         if (lostid == id) {
+           lostname = 'yourself'
+         }
+         else {
+           kills++
+                      }
+       }
+       // on someone else's suicide 
+       else if(killerid == lostid) {
+         lostname = 'himself'
+       }
+       print(killername + ' killed ' + lostname)
+       delete snakes[lostid]
+     })
+     socket.on('left', function (params) {
+       var leftid = params['id']
+       var name = names[leftid]
+       print('<b>' + name + '</b> left the game')
+       delete snakes[leftid]
+     })
+     socket.on('renamed', function (params) {
+       var rid = params['id']
+       if (rid == undefined) {
+         return
+       }
+       names[rid] = params['name']
+       if (rid == id) {
+         renameSnake()
+       }
+     })
+     socket.on('msged', function (params) {
+       var mid = params['id']
+       var name = names[mid] || mid
+       var msg = params['m']
+       print('<b>' + name + '</b>: ' + msg)
+     })
+     socket.on('disconnect', function(params) {
+       unregisterKeys()
+     })
+    </script>
+    <div>
+      <div class="menu">
+        <div class="respawn button">
+          <p>Respawn</p>
         </div>
-    </body>
+      </div>
+      <div id="game">
+        <div id="board"></div>
+        <div class="clear"></div>
+        <div>
+          <div class="inputContainer">
+            <input type="text" class="textbox" id="name"/>
+          </div>
+          <div id="kills">
+            <p>Kills: 0</p>
+          </div>
+        </div>
+      </div>
+      <div id="messageContainer">
+        <div id="messageBox"></div>
+        <div class="inputContainer">
+          <input type="text" class="textbox" id="messageInput"/>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

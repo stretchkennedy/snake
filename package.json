@@ -8,6 +8,7 @@
     "express": "3.x",
     "jquery": "*",
     "nodetime": "~0.8.15",
-    "string": "~1.7.0"
+    "string": "~1.7.0",
+    "underscore": "^1.6.0"
   }
 }
