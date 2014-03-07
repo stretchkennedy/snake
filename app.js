@@ -58,14 +58,70 @@ function pointIsEqual(a, b) {
 function getRandomInt(max) {
   return Math.floor(Math.random() * (max));
 }
-function construct(constructor, args) {
-  function F() {
-    return constructor.apply(this, args);
-  }
-  F.prototype = constructor.prototype;
-  return new F();
-}
 
+_.extend(Snake.prototype, {
+  d: 0,
+  pieces: [],
+  _newDir: 0,
+  changed: true,
+  elongating: 3,
+  growing: true,
+  player: null,
+  board: null,
+  
+  update: function() {
+    this.d = this.newDir()
+    
+    // grow this's head
+    this.grow()
+    this.growing = (this.elongating > 0)
+    
+    // shorten this's tail
+    if (this.growing) {
+      this.elongating--
+    }
+    else {
+      this.pieces.pop()
+    }
+  },
+  died: function() {
+    this.player.snakeDied()
+  },
+  forUpdate: function() {
+    return {
+      head: this.pieces[0],
+      grow: this.growing
+    }
+  },
+  forCreate: function() {
+    return {
+      pieces: this.pieces,
+    }
+  },
+  newDir: function(dir) {
+    if (dir != undefined) {
+      var newDir = (Math.round(dir / 90) * 90).mod(360)
+      // either 0, 90, 180, or 270
+      if([0, 90, 180, 270].indexOf(newDir) == -1) return
+      // not a reversal
+      if(newDir == (this.d + 180).mod(360)) return
+      this._newDir = newDir
+    }
+    return this._newDir
+  },
+  grow: function() {
+    var head = this.pieces[0]
+    if (this.d == 0)
+      this.pieces.unshift({x: (head.x + 1).mod(this.board.width), y: head.y})
+    else if(this.d == 90)
+      this.pieces.unshift({x: head.x, y: (head.y - 1).mod(this.board.height)})
+    else if(this.d == 180)
+      this.pieces.unshift({x: (head.x - 1).mod(this.board.width), y: head.y})
+    else if(this.d == 270)
+      this.pieces.unshift({x: head.x, y: (head.y + 1).mod(this.board.height)})
+    this.pieces[0].changed = true
+  }
+})
 function Snake(board, player, pos) {
   if (player.snake) return
   var snake = this
@@ -75,62 +131,12 @@ function Snake(board, player, pos) {
     y: snakeTail.y,
     changed: true
   }]
-  this.d = snakeTail.d
-  this.newDir = snakeTail.d
-  this.changed = true
-  this.elongating = 3
-  this.growing = true
-  this.update = function() {
-    snake.d = snake.newDir
-    
-    // grow snake's head
-    snake.grow()
-    snake.growing = (snake.elongating > 0)
-    
-    // shorten snake's tail
-    if (snake.growing) {
-      snake.elongating--
-    }
-    else {
-      snake.pieces.pop()
-    }
-  }
-  this.died = function() {
-    player.snakeDied()
-  }
-  this.forUpdate = function() {
-    return {
-      head: snake.pieces[0],
-      grow: snake.growing
-    }
-  }
-  this.forCreate = function() {
-    return {
-      pieces: snake.pieces,
-    }
-  }
-  
-  this.grow = function() {
-    var head = snake.pieces[0]
-    if (snake.d == 0)
-      snake.pieces.unshift({x: (head.x + 1).mod(board.width), y: head.y})
-    else if(snake.d == 90)
-      snake.pieces.unshift({x: head.x, y: (head.y - 1).mod(board.height)})
-    else if(snake.d == 180)
-      snake.pieces.unshift({x: (head.x - 1).mod(board.width), y: head.y})
-    else if(snake.d == 270)
-      snake.pieces.unshift({x: head.x, y: (head.y + 1).mod(board.height)})
-    snake.pieces[0].changed = true
-  }
-  
-  // constructor
-  board.numSnakes++
+  this.player = player
+  this.board = board
   player.snake = this
-
-  var newSnakes = {}
-  newSnakes[player.id] = player.snake.forCreate()
-  io.sockets.emit('create', {snakes: newSnakes})
-  player.socket.emit('spawn', {id: player.id})
+  board.numSnakes++
+  this.d = snakeTail.d
+  this.newDir(snakeTail.d)
 }
 
 _.extend(Player.prototype, {
@@ -139,7 +145,7 @@ _.extend(Player.prototype, {
   board: null,
   kills: null,
 
-  update: function() {
+  afterUpdate: function() {
     /* do nothing */
   },
   name: function() {
@@ -154,6 +160,12 @@ _.extend(Player.prototype, {
   },
   spawnSnake: function() {
     this.snake = new Snake(this.board, this, this.board.newTail())
+    
+    var newSnakes = {}
+    newSnakes[this.id] = this.snake.forCreate()
+    io.sockets.emit('create', {
+      snakes: newSnakes
+    })
   },
   snakeDied: function() {
     if(!this.snake) {
@@ -183,6 +195,13 @@ _.extend(Player.prototype, {
     io.sockets.emit('joined', {id: this.id})
     this.spawnSnake()
     return this
+  },
+  disconnected: function () {
+    io.sockets.emit('left', {id: this.id})
+    if (this.snake) {
+      this.board.numSnakes--
+    }
+    delete this.board.players[this.id]
   }
 })
 function Player (board) {
@@ -193,15 +212,23 @@ function Player (board) {
   this.board.players[this.id] = this
 }
 
+
+_.extend(AIPlayer.prototype, Player.prototype, {
+  afterUpdate: function() {
+      // TODO
+  }
+})
+function AIPlayer (board) {
+  Player.apply(this, arguments)
+}
+
 _.extend(HumanPlayer.prototype, Player.prototype, {
   socket: null,
-  
-  disconnected: function () {
-    io.sockets.emit('left', {id: this.id})
-    if (this.snake) {
-      this.board.numSnakes--
-    }
-    delete this.board.players[this.id]
+  spawnSnake: function() {
+    Player.prototype.spawnSnake.apply(this, arguments)
+    this.socket.emit('spawn', {
+      id: this.id
+    })
   },
   connect: function() {
     this.socket.emit('accept', {
@@ -228,14 +255,7 @@ function HumanPlayer (board, socket) {
     if (!player.snake) {
       return
     }
-
-    var newDir = (Math.round(Number(params['d']) / 90) * 90).mod(360)
-    // either 0, 90, 180, or 27
-    if([0, 90, 180, 270].indexOf(newDir) == -1) return
-    // not a reversal
-    if(newDir == (player.snake.d + 180).mod(360)) return
-
-    player.snake.newDir = newDir
+    player.snake.newDir(Number(params['d']))
   })
   this.socket.on('respawn', function (params) {
     if(player.snake) return
@@ -264,10 +284,10 @@ function Board(w, h) {
   this.fruit = []
   
   // methods
-  var _safeSpaces
+  this._safeSpaces
   this.safeSpaces = function() {
-    if (_safeSpaces) {
-      return _safeSpaces
+    if (board._safeSpaces) {
+      return board._safeSpaces
     }
     
     // find unsafe spaces
@@ -295,12 +315,12 @@ function Board(w, h) {
       grid[u.x][u.y] = false
     }
     
-    _safeSpaces = []
+    board._safeSpaces = []
     // retrieve safe spaces
     for (var x = 0; x < board.width; x++) {
       for (var y = 0; y < board.height; y++) {
         if (grid[x][y]) {
-          _safeSpaces.push({
+          board._safeSpaces.push({
             x: x,
             y: y
           })
@@ -308,7 +328,7 @@ function Board(w, h) {
       }
     }
     
-    return _safeSpaces
+    return board._safeSpaces
   }
   this.getSafeSpace = function() {
     var safeSpaces = board.safeSpaces()
@@ -362,18 +382,38 @@ function Board(w, h) {
   this.newHumanPlayer = function(socket) {
     return new HumanPlayer(board, socket)
   }
+  this.beforeUpdate = function() {}
+  this.update =  function() {
+    // invalidate safe spawning spaces
+    board._safeSpaces = undefined
+    board.updatePosition()
+    board.collision()
+
+    io.sockets.emit('update', {
+      snakes: board.snakesForUpdate(),
+      fruit: board.fruit
+    })
+  }
+  this.afterUpdate = function() {
+    for (var pid in board.players) {
+      board.players[pid].afterUpdate()
+    }
+  }
   // fruit spawning
-  function spawnFruitInterval() { return 4000 / Math.sqrt(board.numSnakes + 1) }
-  function spawnFruit() {
+  this.spawnFruitInterval = function() { return 4000 / Math.sqrt(board.numSnakes + 1) }
+  this.spawnFruit = function() {
     if (board.fruit.length < 2 * board.numSnakes) {
       board.fruit.push(board.getSafeSpace())
     }
-    setTimeout(spawnFruit, spawnFruitInterval())
+    board.setFruitTimeout()
   }
-  setTimeout(spawnFruit, spawnFruitInterval())
-  
+  this.setFruitTimeout = function() {
+    setTimeout(function() {
+      board.spawnFruit()
+    }, board.spawnFruitInterval())
+  }
   // logic
-  function updatePosition() {
+  this.updatePosition = function() {
     for (var pid in board.players) {
       var snake = board.players[pid].snake
       if (snake) {
@@ -381,7 +421,7 @@ function Board(w, h) {
       }
     }
   }
-  function collision() {
+  this.collision = function() {
     // collision
     for (var pid1 in board.players) {
       var snake1 = board.players[pid1].snake
@@ -427,20 +467,19 @@ function Board(w, h) {
       }
     }
   }
-  
+
+  // fruit loop
+  this.setFruitTimeout()
+
   // main loop
   var tick = 300
-  function update() {
-    // invalidate safe spawning spaces
-    _safeSpaces = undefined
-    updatePosition()
-    collision()
-    io.sockets.emit('update', {
-      snakes: board.snakesForUpdate(),
-      fruit: board.fruit
-    })
-  }
-  setInterval(update, tick)
+  setInterval(function () {
+
+    board.beforeUpdate()
+    board.update()
+    board.afterUpdate()
+
+  }, tick)
 }
 
 var board = new Board(20, 20)
