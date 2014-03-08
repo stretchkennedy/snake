@@ -158,11 +158,11 @@
        })
      }
      
+     var messageBox;
      function print(message) {
-       $('<p class="message">' + message + '</p>')
-                                  .appendTo($('div#messageBox'))
-       var msgdiv = $('#messageBox')
-       msgdiv[0].scrollTop = msgdiv[0].scrollHeight
+       messageBox = messageBox || $('#messageBox')
+       $('<p class="message">' + message + '</p>').appendTo(messageBox);
+       messageBox[0].scrollTop = messageBox[0].scrollHeight
      }
      
      socket.on('joined', function (params) {
