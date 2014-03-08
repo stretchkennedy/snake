@@ -56,7 +56,7 @@ function pointIsEqual(a, b) {
   return (a.y == b.y && a.x == b.x)
 }
 function getRandomInt(max) {
-  return Math.floor(Math.random() * (max));
+  return Math.floor(Math.random() * max);
 }
 
 _.extend(Snake.prototype, {
@@ -84,6 +84,15 @@ _.extend(Snake.prototype, {
       this.pieces.pop()
     }
   },
+  nearHead: function() {
+    var head = this.pieces[0]
+    return [
+      { y: (head.y + 1).mod(this.board.height), x: head.x },
+      { y: (head.y - 1).mod(this.board.height), x: head.x },
+      { y: head.y, x: (head.x + 1).mod(this.board.width) },
+      { y: head.y, x: (head.x - 1).mod(this.board.width) }
+    ]
+  },
   died: function() {
     this.player.snakeDied()
   },
@@ -98,9 +107,12 @@ _.extend(Snake.prototype, {
       pieces: this.pieces,
     }
   },
+  roundDirection: function(dir) {
+    return (Math.round(dir / 90) * 90).mod(360)
+  },
   newDir: function(dir) {
     if (dir != undefined) {
-      var newDir = (Math.round(dir / 90) * 90).mod(360)
+      var newDir = this.roundDirection(dir)
       // either 0, 90, 180, or 270
       if([0, 90, 180, 270].indexOf(newDir) == -1) return
       // not a reversal
@@ -110,16 +122,23 @@ _.extend(Snake.prototype, {
     return this._newDir
   },
   grow: function() {
+    var next = this.nextPiece(this.d)
+    if (next) {
+      this.pieces.unshift(next)
+      next.changed = true
+    }
+  },
+  nextPiece: function(dir) {
+    dir = this.roundDirection(dir)
     var head = this.pieces[0]
-    if (this.d == 0)
-      this.pieces.unshift({x: (head.x + 1).mod(this.board.width), y: head.y})
-    else if(this.d == 90)
-      this.pieces.unshift({x: head.x, y: (head.y - 1).mod(this.board.height)})
-    else if(this.d == 180)
-      this.pieces.unshift({x: (head.x - 1).mod(this.board.width), y: head.y})
-    else if(this.d == 270)
-      this.pieces.unshift({x: head.x, y: (head.y + 1).mod(this.board.height)})
-    this.pieces[0].changed = true
+    if (dir === 0)
+      return {x: (head.x + 1).mod(this.board.width), y: head.y}
+    else if(dir === 90)
+      return {x: head.x, y: (head.y - 1).mod(this.board.height)}
+    else if(dir === 180)
+      return {x: (head.x - 1).mod(this.board.width), y: head.y}
+    else if(dir === 270)
+      return {x: head.x, y: (head.y + 1).mod(this.board.height)}
   }
 })
 function Snake(board, player, pos) {
@@ -213,6 +232,55 @@ function Player (board) {
 }
 
 
+_.extend(AIPlayer.prototype, Player.prototype, {
+  afterUpdate: function() {
+    this._unsafe = null
+    if (!this.snake) {
+      this.spawnSnake()
+      return
+    }
+
+    // pick a random direction
+    var prospect = this.newDir || 0
+    if (!getRandomInt(3)) {
+      prospect = this.snake.roundDirection(getRandomInt(360))
+    }
+
+    // get fruit if it's adjacent
+    var change = 0
+    while (change < 360 && 
+	   !this.board.hasFruit(this.snake.nextPiece(prospect + change))) {
+      change += 90
+    }
+    prospect += change
+    
+    // keep turning until safe or back at the start
+    change = 0
+    while (change < 360 && 
+	   !this.isSafe(this.snake.nextPiece(prospect + change))) {
+      change += 90
+    }
+    prospect += change
+    
+    // go in the chosen direction
+    this.snake.newDir(prospect)
+  },
+  isSafe: function(piece) {
+    this._unsafe = this._unsafe || this.board.headAreasOfOtherSnakes(this.id)
+    
+    return this.board.isSafe(piece) && _.some(this._unsafe, function(other_piece) {
+      if (!other_piece) {
+	return false;
+      }
+      
+      return pointIsEqual(piece, other_piece)
+    })
+  }
+})
+function AIPlayer (board) {
+  Player.apply(this, arguments)
+}
+
 _.extend(AUPlayer.prototype, Player.prototype, {
   afterUpdate: function() {
     if (!this.snake) {
@@ -290,38 +358,35 @@ function Board(w, h) {
   this.fruit = []
   
   // methods
+  this.hasFruit = function(piece) {
+    return _.some(board.fruit, function(fruit) {
+      return pointIsEqual(piece, fruit)
+    })
+  }
+  this.headAreasOfOtherSnakes = function(skip_id) {
+    var unsafe = []
+    for (pid in board.players) {
+      var snake = board.players[pid].snake
+      if (!snake || pid === skip_id) {
+        continue
+      }
+      unsafe = unsafe.concat(snake.nearHead())
+    }
+    return unsafe;
+  }
+  this.invalidateSafety = function() {
+    board._safeSpaces = null
+    board._safeGrid = null
+  }
   this._safeSpaces
   this.safeSpaces = function() {
     if (board._safeSpaces) {
       return board._safeSpaces
     }
-    
-    // find unsafe spaces
-    var unsafe = []
-    for (pid in board.players) {
-      var snake = board.players[pid].snake
-      if (!snake) {
-        continue
-      }
-      unsafe = unsafe.concat(snake.pieces)
-    }
-    
-    // init grid
-    var grid = new Array(board.width)
-    for (var x = 0; x < board.width; x++) {
-      grid[x] = new Array(board.height)
-      for (var y = 0; y < board.height; y++) {
-        grid[x][y] = true
-      }
-    }
-    
-    // mark unsafe spaces in grid
-    for (var i = 0; i < unsafe.length; i++) {
-      var u = unsafe[i]
-      grid[u.x][u.y] = false
-    }
-    
+
+    var grid = board.safeGrid()
     board._safeSpaces = []
+    
     // retrieve safe spaces
     for (var x = 0; x < board.width; x++) {
       for (var y = 0; y < board.height; y++) {
@@ -333,8 +398,41 @@ function Board(w, h) {
         }
       }
     }
-    
+
     return board._safeSpaces
+  }
+  this._safeGrid
+  this.safeGrid = function() {
+    if (board._safeGrid) {
+      return board._safeGrid;
+    }
+
+    // find unsafe spaces
+    var unsafe = []
+    for (pid in board.players) {
+      var snake = board.players[pid].snake
+      if (!snake) {
+        continue
+      }
+      unsafe = unsafe.concat(snake.pieces)
+    }
+    
+    // init board._safeGrid
+    board._safeGrid = new Array(board.width)
+    for (var x = 0; x < board.width; x++) {
+      board._safeGrid[x] = new Array(board.height)
+      for (var y = 0; y < board.height; y++) {
+        board._safeGrid[x][y] = true
+      }
+    }
+    
+    // mark unsafe spaces in board._safeGrid
+    for (var i = 0; i < unsafe.length; i++) {
+      var u = unsafe[i]
+      board._safeGrid[u.x][u.y] = false
+    }
+
+    return board._safeGrid
   }
   this.getSafeSpace = function() {
     var safeSpaces = board.safeSpaces()
@@ -347,6 +445,15 @@ function Board(w, h) {
     else {
       return safeSpaces[getRandomInt(safeSpaces.length)]
     }
+  }
+  this.isSafe = function(point) {
+    if (!point ||
+	point.x >= board.width || point.x < 0 ||
+	point.y >= board.height || point.y < 0 ||
+	!board.safeGrid()[point.x][point.y]) {
+      return false;
+    }
+    return true
   }
   this.allNames = function() {
     var names = {}
@@ -365,7 +472,7 @@ function Board(w, h) {
     }
     return snakes
   }
-  this.snakesForUpdate = function() {
+ this.snakesForUpdate = function() {
     var changed = {}
     for (var pid in board.players) {
       var snake = board.players[pid].snake
@@ -389,12 +496,15 @@ function Board(w, h) {
     return new HumanPlayer(board, socket)
   }
   this.newAIPlayer = function() {
+    return new AIPlayer(board)
+  }
+  this.newAUPlayer = function() {
     return new AUPlayer(board)
   }
   this.beforeUpdate = function() {}
   this.update =  function() {
     // invalidate safe spawning spaces
-    board._safeSpaces = undefined
+    board.invalidateSafety()
     board.updatePosition()
     board.collision()
 
