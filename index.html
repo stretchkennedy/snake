@@ -80,8 +80,19 @@
        $('*').off()
      }
      
+     var tileCache;
      function tilediv(x, y) {
-       return $('.x' + x + '.y' + y)
+       if (x >= width || y >= height) {
+         return;
+       }
+       if (!tileCache) {
+         tileCache = []
+         var rows = $('.row')
+         for(var i = 0; i < rows.length; i++) {
+           tileCache[i] = rows[i].childNodes
+         }
+       }
+       return tileCache[y][x]
      }
      
      function updateKills() {
@@ -89,6 +100,7 @@
      }
      
      function addBoard() {
+       tileCache = null
        board = $('div#board')
        board.html('')
        for(var y = 0; y < height; y++) {
@@ -104,8 +116,19 @@
        board.append($('<div class="clear"></div>'))
      }
      
-     function updateView() {
-       $('div#board div.tile').removeClass('you them fruit')
+     function updateView(params) {
+       if (params.removed) {
+         var pieces = params.removed
+         for (var i = 0; i < pieces.length; i++) {
+           var piece = pieces[i]
+           var tile = tilediv(piece.x, piece.y)
+           if (tile) tile.className = 'tile'
+         }
+       }
+       else {
+         $('div#board div.tile').removeClass('you them fruit')
+       }
+
        for (var sid in snakes) {
          var snake = snakes[sid]
          var cname = 'them'
@@ -113,10 +136,12 @@
          for (var i = 0; i < snake.pieces.length; i++) {
            var x = snake.pieces[i].x
            var y = snake.pieces[i].y
-           tilediv(x, y).addClass(cname)
+           var tile = tilediv(x, y)
+           if (tile) tile.className = 'tile ' + cname
          }
          for (var i = 0; i < fruit.length; i++) {
-           tilediv(fruit[i].x, fruit[i].y).addClass('fruit')
+           var tile = tilediv(fruit[i].x, fruit[i].y)
+           if (tile) tile.className = 'tile fruit'
          }
        }
      }
@@ -127,7 +152,7 @@
      
      function print(message) {
        $('<p class="message">' + message + '</p>')
-				  .appendTo($('div#messageBox'))
+                                  .appendTo($('div#messageBox'))
        var msgdiv = $('#messageBox')
        msgdiv[0].scrollTop = msgdiv[0].scrollHeight
      }
@@ -184,24 +209,27 @@
        fruit = params['fruit']
        if ('names' in params)
        names = params['names']
-       updateView()
+       updateView({
+	 removed: []
+       })
      })
      socket.on('update', function (params) {
        var newSnakes = params['snakes']
+       var removedPieces = []
        for (num in newSnakes) {
          if (newSnakes[num].head) {
            snakes[num].pieces.unshift(newSnakes[num].head)
          }
          if (!newSnakes[num].grow) {
-           snakes[num].pieces.pop()
-         }
-         else {
-           console.log('grew')
+           var removedPiece = snakes[num].pieces.pop()
+	   removedPieces.push(removedPiece)
          }
        }
        
        fruit = params['fruit']
-       updateView()
+       updateView({
+	 removed: removedPieces
+       })
      })
      socket.on('die', function (params) {
        var lostid = params['id']
