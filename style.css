@@ -24,8 +24,6 @@ body {
 #messageInputContainer {
     float: left;
     position: relative;
-    bottom: 28px;
-    margin-bottom: -28px;
 }
 .textbox {
     margin:0px;
@@ -34,6 +32,7 @@ body {
     float: left;
     max-width: 240px;
     height: 100%;
+    padding-bottom: 28px;
 }
 @media (max-width: 440px) {
     #messageContainer {
@@ -47,6 +46,7 @@ body {
     overflow-y:scroll;
     height: 100%;
     width:100%;
+    top: 0px;
     bottom: 28px;
     position: relative;
 }
