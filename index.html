@@ -149,6 +149,14 @@
      function renameSnake() {
        $("#name").val(names[id])
      }
+
+     function removeSnake(id) {
+       var pieces = snakes[id].pieces
+       delete snakes[id]
+       updateView({
+	 removed: pieces
+       })
+     }
      
      function print(message) {
        $('<p class="message">' + message + '</p>')
@@ -261,13 +269,13 @@
          lostname = 'himself'
        }
        print(killername + ' killed ' + lostname)
-       delete snakes[lostid]
+       removeSnake(lostid)
      })
      socket.on('left', function (params) {
        var leftid = params['id']
        var name = names[leftid]
        print('<b>' + name + '</b> left the game')
-       delete snakes[leftid]
+       removeSnake(leftid)
      })
      socket.on('renamed', function (params) {
        var rid = params['id']
