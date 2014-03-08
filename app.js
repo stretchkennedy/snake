@@ -491,14 +491,14 @@ function Board(w, h) {
   }, tick)
 }
 
-var board = new Board(20, 20)
+var board = new Board(40, 40)
 
 io.sockets.on('connection', function (socket) {
   console.log(socket.handshake.address.address + ' connected')
   board.newHumanPlayer(socket).connect()
 })
 
-var bots = 4
+var bots = 12
 for(var i = 0; i < bots; i++) {
   board.newAIPlayer().connect()
 }

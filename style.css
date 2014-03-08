@@ -1,5 +1,18 @@
+*, *:before, *:after {
+    -moz-box-sizing: border-box; 
+    -webkit-box-sizing: border-box; 
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+}
+body {
+    min-height: 100%;
+    margin: 0px;
+}
 #name {
-	float: left;
+    float: left;
     width:100px;
     padding-left:4px;
 }
@@ -8,22 +21,34 @@
     margin:0px;
     padding-right:4px;
 }
-.inputContainer {
-    float:left;
-    margin:0px;
+#messageInputContainer {
+    float: left;
+    position: relative;
+    bottom: 28px;
+    margin-bottom: -28px;
 }
 .textbox {
     margin:0px;
 }
 #messageContainer {
-	float: left;
-    max-height:272px;
-    max-width:240px;
+    float: left;
+    max-width: 240px;
+    height: 100%;
+}
+@media (max-width: 440px) {
+    #messageContainer {
+	height: auto;
+	position: absolute;
+	top: 256px;
+	bottom: 0px;
+    }
 }
 #messageBox {
     overflow-y:scroll;
-    height:240px;
+    height: 100%;
     width:100%;
+    bottom: 28px;
+    position: relative;
 }
 #messageInput {
     width: 100%;
@@ -33,35 +58,60 @@
     float:left;
     position:relative;
 }
-#board div.tile {
-	position:relative;
-	z-index:0;
-	background:black;
-	width:10px;
-	height:10px;
-	float:left;
-	border: 1px solid black;
+#board .tile {
+    position:relative;
+    z-index:0;
+    background:black;
+    width:10px;
+    height:10px;
+    float:left;
+    border: 1px solid black;
 }
-#board div.you {
-	z-index:30;
-	background:green;
+@media (max-width: 640px), (max-height: 428px) {
+    #board .tile {
+	width:5px;
+	height:5px;
+    }
 }
-#board div.them {
-	z-index:20;
-	background:red;
+@media (max-width: 200px), (max-height: 200px) {
+    #board .tile {
+	width: 2px;
+	height: 2px;
+	border: none;
+    }
 }
-#board div.row {
-	clear:both;
+@media (min-width: 840px) and (min-height: 628px) {
+    #board .tile {
+	width:15px;
+	height:15px;
+    }
 }
-#board div.fruit {
-	z-index:10;
-	background:yellow;
+@media (min-width: 1040px) and (min-height: 828px) {
+    #board .tile {
+	width:20px;
+	height:20px;
+    }
+}
+#board .you {
+    z-index:30;
+    background:green;
+}
+#board .them {
+    z-index:20;
+    background:red;
+}
+#board .row {
+    clear:both;
+}
+#board .fruit {
+    z-index:10;
+    background:yellow;
 }
 body {
-	background:white;
+    background:white;
 }
 p {
-	font:bold 18px arial;
+    font:bold 18px arial;
     padding:3px;
     margin:0px;
 }
@@ -69,11 +119,11 @@ input[type="text"] {
     font:bold 18px arial;
 }
 .message {
-	font:italic 14px arial;
-	color:grey;
+    font:italic 14px arial;
+    color:grey;
 }
 .container {
-	display:inline-block;
+    display:inline-block;
 }
 .menu {
     position:absolute;
