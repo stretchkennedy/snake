@@ -213,12 +213,18 @@ function Player (board) {
 }
 
 
-_.extend(AIPlayer.prototype, Player.prototype, {
+_.extend(AUPlayer.prototype, Player.prototype, {
   afterUpdate: function() {
-      // TODO
+    if (!this.snake) {
+      this.spawnSnake()
+      return
+    }
+    if (getRandomInt(2)) {
+      this.snake.newDir(getRandomInt(360))
+    }
   }
 })
-function AIPlayer (board) {
+function AUPlayer (board) {
   Player.apply(this, arguments)
 }
 
@@ -382,6 +388,9 @@ function Board(w, h) {
   this.newHumanPlayer = function(socket) {
     return new HumanPlayer(board, socket)
   }
+  this.newAIPlayer = function() {
+    return new AUPlayer(board)
+  }
   this.beforeUpdate = function() {}
   this.update =  function() {
     // invalidate safe spawning spaces
@@ -488,3 +497,8 @@ io.sockets.on('connection', function (socket) {
   console.log(socket.handshake.address.address + ' connected')
   board.newHumanPlayer(socket).connect()
 })
+
+var bots = 4
+for(var i = 0; i < bots; i++) {
+  board.newAIPlayer().connect()
+}
