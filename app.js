@@ -68,14 +68,14 @@ _.extend(Snake.prototype, {
   growing: true,
   player: null,
   board: null,
-  
+
   update: function() {
     this.d = this.newDir()
-    
+
     // grow this's head
     this.grow()
     this.growing = (this.elongating > 0)
-    
+
     // shorten this's tail
     if (this.growing) {
       this.elongating--
@@ -163,6 +163,8 @@ _.extend(Player.prototype, {
   id: null,
   board: null,
   kills: null,
+  deaths: null,
+
 
   afterUpdate: function() {
     /* do nothing */
@@ -179,7 +181,7 @@ _.extend(Player.prototype, {
   },
   spawnSnake: function() {
     this.snake = new Snake(this.board, this, this.board.newTail())
-    
+
     var newSnakes = {}
     newSnakes[this.id] = this.snake.forCreate()
     io.sockets.emit('create', {
@@ -203,6 +205,7 @@ _.extend(Player.prototype, {
     else {
       message = {id: this.id}
     }
+    this.snake.deaths++
     io.sockets.emit('die', message)
     delete this.board.players[this.id].snake
     delete this.snake
@@ -311,18 +314,24 @@ _.extend(HumanPlayer.prototype, Player.prototype, {
       height: this.board.height
     })
     this.socket.emit('create', {
-      snakes: this.board.snakesForCreate(), 
-      fruit: this.board.fruit, 
+      snakes: this.board.snakesForCreate(),
+      fruit: this.board.fruit,
       names: this.board.allNames()
     })
-    return Player.prototype.connect.apply(this, arguments)
+
+    var that = this
+    this.socket.on('name', function(params) {
+      that._name = params['name']
+      Player.prototype.connect.apply(that, arguments)
+    })
+    this
   }
 })
 function HumanPlayer (board, socket) {
   Player.apply(this, arguments)
   this.socket = socket
   this._name = 'Player ' + this.id
-  
+
   // register player to receive messages
   var player = this
   this.socket.on('turn', function (params) {
@@ -332,7 +341,7 @@ function HumanPlayer (board, socket) {
     player.snake.newDir(Number(params['d']))
   })
   this.socket.on('respawn', function (params) {
-    if(player.snake) return
+    if(player.snake || !player.name()) return
     player.spawnSnake()
   })
   this.socket.on('disconnect', function (params) {
@@ -608,7 +617,9 @@ io.sockets.on('connection', function (socket) {
   board.newHumanPlayer(socket).connect()
 })
 
-var bots = 12
-for(var i = 0; i < bots; i++) {
+for(var i = 0; i < 6; i++) {
   board.newAIPlayer().connect()
+}
+for(var i = 0; i < 2; i++) {
+  board.newAUPlayer().connect()
 }

@@ -6,20 +6,35 @@
     <script src=/socket.io/socket.io.js></script>
     <script src=/jquery/jquery.min.js></script>
     <script src=/jquery/jquery.caret.js></script>
-    <script>        
+    <script>
      var socket = io.connect(location.protocol + '//' + location.host)
      var id
      var snakes
      var names = {}
      var fruit
      var kills = 0
+     var deaths = 0
      var width = 0
      var height = 0
-     
+
+     $(function() {
+       $('#main').hide()
+       $('#pick-name .set-name').click(function() {
+
+         var name = $('#pick-name .name').val()
+         $('#name').val(name)
+
+         $('#pick-name').hide()
+         $('#main').show()
+
+         socket.emit('name', { name: name })
+       })
+     })
+
      Number.prototype.mod = function(n) {
        return ((this%n)+n)%n;
      }
-     
+
      function registerKeys() {
        var larrow = 37
        var left = 180
@@ -29,7 +44,7 @@
        var right = 0
        var darrow = 40
        var down = 270
-       
+
        var enter = 13
        $(document).keydown(function (event) {
          // send turn event
@@ -46,7 +61,7 @@
            socket.emit('turn', {d: d})
          }
        })
-       $('.textbox').keydown(function (event) {
+       $('#main .textbox').keydown(function (event) {
          if (event.which == larrow ||
              event.which == rarrow ||
              event.which == uarrow ||
@@ -55,7 +70,7 @@
            event.preventDefault()
          }
        })
-       $('.textbox').keyup(function (event) {
+       $('#main .textbox').keyup(function (event) {
          // return caret to end of box
          $(this).caretToEnd()
        })
@@ -65,21 +80,21 @@
            $(this).val('')
          }
        })
-       $('.respawn').click(function() {
+       $('#main .respawn').click(function() {
          socket.emit('respawn')
        })
-       
+
        $('#name').change(function() {
-         socket.emit('rename', {name: $('#name').val()})
+         socket.emit('rename', { name: name })
        })
      }
-     
+
      function unregisterKeys() {
        $(document).off()
        $(window).off()
        $('*').off()
      }
-     
+
      var tileCache;
      function tilediv(x, y) {
        if (x >= width || y >= height) {
@@ -94,11 +109,11 @@
        }
        return tileCache[y][x]
      }
-     
-     function updateKills() {
-       $('#kills').html('<p>Kills: ' + kills + '</p>')
+
+     function updateKD() {
+       $('#kills').html('<p>K/D: ' + kills + '/' + deaths + '</p>')
      }
-     
+
      function addBoard() {
        tileCache = null
        board = $('div#board')
@@ -115,7 +130,7 @@
        }
        board.append($('<div class="clear"></div>'))
      }
-     
+
      function updateView(params) {
        if (params.removed) {
          var pieces = params.removed
@@ -145,7 +160,7 @@
          }
        }
      }
-     
+
      function renameSnake() {
        $("#name").val(names[id])
      }
@@ -154,17 +169,17 @@
        var pieces = snakes[id].pieces
        delete snakes[id]
        updateView({
-	 removed: pieces
+	     removed: pieces
        })
      }
-     
+
      var messageBox;
      function print(message) {
        messageBox = messageBox || $('#messageBox')
        $('<p class="message">' + message + '</p>').appendTo(messageBox);
        messageBox[0].scrollTop = messageBox[0].scrollHeight
      }
-     
+
      socket.on('joined', function (params) {
        var jid = params['id']
        if (jid && names[jid]) {
@@ -200,8 +215,7 @@
        print('failed to reconnect')
      })
      socket.on('spawn', function (params) {
-       kills = 0
-       updateKills()
+       updateKD()
        $('.menu').hide()
        $('#board').removeClass("faded")
      })
@@ -218,7 +232,7 @@
        if ('names' in params)
        names = params['names']
        updateView({
-	 removed: []
+	     removed: []
        })
      })
      socket.on('update', function (params) {
@@ -230,13 +244,13 @@
          }
          if (!newSnakes[num].grow) {
            var removedPiece = snakes[num].pieces.pop()
-	   removedPieces.push(removedPiece)
+	       removedPieces.push(removedPiece)
          }
        }
-       
+
        fruit = params['fruit']
        updateView({
-	 removed: removedPieces
+	     removed: removedPieces
        })
      })
      socket.on('die', function (params) {
@@ -251,10 +265,11 @@
          $('.menu').show()
          $('#board').addClass("faded")
          lostname = 'you'
-       }
+         deaths++
+                    }
        // on your kill
        if (killerid == id) {
-         updateKills()
+         updateKD()
          killername = 'you'
          // on your suicide
          if (lostid == id) {
@@ -264,12 +279,13 @@
            kills++
                       }
        }
-       // on someone else's suicide 
+       // on someone else's suicide
        else if(killerid == lostid) {
          lostname = 'himself'
        }
        print(killername + ' killed ' + lostname)
        removeSnake(lostid)
+       updateKD()
      })
      socket.on('left', function (params) {
        var leftid = params['id']
@@ -297,7 +313,17 @@
        unregisterKeys()
      })
     </script>
-    <div>
+    <div id="pick-name">
+      <div class="menu">
+        <div class="inputContainer">
+          <input type="text" class="textbox name">
+        </div>
+        <div class="button set-name">
+          <p>Choose name</p>
+        </div>
+      </div>
+    </div>
+    <div id="main">
       <div class="menu">
         <div class="respawn button">
           <p>Respawn</p>
@@ -308,7 +334,7 @@
         <div class="clear"></div>
         <div>
           <div class="inputContainer">
-            <input type="text" class="textbox" id="name"/>
+            <input type="text" class="textbox" id="name">
           </div>
           <div id="kills">
             <p>Kills: 0</p>
