@@ -2,7 +2,7 @@ if(process.env.NODETIME_ACCOUNT_KEY) {
   require('nodetime').profile({
     accountKey: process.env.NODETIME_ACCOUNT_KEY,
     appName: 'sk-node-snake' // optional
-  });
+  })
 }
 
 var app = require('express')()
@@ -50,13 +50,13 @@ app.get('/jquery/jquery.caret.js', function (req, res) {
 })
 
 Number.prototype.mod = function(n) {
-  return ((this%n)+n)%n;
+  return ((this%n)+n)%n
 }
 function pointIsEqual(a, b) {
   return (a.y == b.y && a.x == b.x)
 }
 function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
+  return Math.floor(Math.random() * max)
 }
 
 _.extend(Snake.prototype, {
@@ -207,7 +207,7 @@ _.extend(Player.prototype, {
     delete this.board.players[this.id].snake
     delete this.snake
     this.board.numSnakes--
-    return message;
+    return message
   },
   connect: function() {
     this.name(this._name)
@@ -224,7 +224,7 @@ _.extend(Player.prototype, {
   }
 })
 function Player (board) {
-  this.board = board  
+  this.board = board
   this.id = this.board.maxID++
   this.kills = 0
   this._name = 'Bot ' + this.id
@@ -248,31 +248,31 @@ _.extend(AIPlayer.prototype, Player.prototype, {
 
     // get fruit if it's adjacent
     var change = 0
-    while (change < 360 && 
-	   !this.board.hasFruit(this.snake.nextPiece(prospect + change))) {
+    while (change < 360 &&
+	       !this.board.hasFruit(this.snake.nextPiece(prospect + change))) {
       change += 90
     }
     prospect += change
-    
+
     // keep turning until safe or back at the start
     change = 0
-    while (change < 360 && 
-	   !this.isSafe(this.snake.nextPiece(prospect + change))) {
+    while (change < 360 &&
+	       !this.isSafe(this.snake.nextPiece(prospect + change))) {
       change += 90
     }
     prospect += change
-    
+
     // go in the chosen direction
     this.snake.newDir(prospect)
   },
   isSafe: function(piece) {
     this._unsafe = this._unsafe || this.board.headAreasOfOtherSnakes(this.id)
-    
+
     return this.board.isSafe(piece) && _.some(this._unsafe, function(other_piece) {
       if (!other_piece) {
-	return false;
+	    return false
       }
-      
+
       return pointIsEqual(piece, other_piece)
     })
   }
@@ -356,7 +356,7 @@ function Board(w, h) {
   this.maxID = 0
   this.numSnakes = 0
   this.fruit = []
-  
+
   // methods
   this.hasFruit = function(piece) {
     return _.some(board.fruit, function(fruit) {
@@ -372,7 +372,7 @@ function Board(w, h) {
       }
       unsafe = unsafe.concat(snake.nearHead())
     }
-    return unsafe;
+    return unsafe
   }
   this.invalidateSafety = function() {
     board._safeSpaces = null
@@ -386,7 +386,7 @@ function Board(w, h) {
 
     var grid = board.safeGrid()
     board._safeSpaces = []
-    
+
     // retrieve safe spaces
     for (var x = 0; x < board.width; x++) {
       for (var y = 0; y < board.height; y++) {
@@ -404,7 +404,7 @@ function Board(w, h) {
   this._safeGrid
   this.safeGrid = function() {
     if (board._safeGrid) {
-      return board._safeGrid;
+      return board._safeGrid
     }
 
     // find unsafe spaces
@@ -416,7 +416,7 @@ function Board(w, h) {
       }
       unsafe = unsafe.concat(snake.pieces)
     }
-    
+
     // init board._safeGrid
     board._safeGrid = new Array(board.width)
     for (var x = 0; x < board.width; x++) {
@@ -425,7 +425,7 @@ function Board(w, h) {
         board._safeGrid[x][y] = true
       }
     }
-    
+
     // mark unsafe spaces in board._safeGrid
     for (var i = 0; i < unsafe.length; i++) {
       var u = unsafe[i]
@@ -448,10 +448,10 @@ function Board(w, h) {
   }
   this.isSafe = function(point) {
     if (!point ||
-	point.x >= board.width || point.x < 0 ||
-	point.y >= board.height || point.y < 0 ||
-	!board.safeGrid()[point.x][point.y]) {
-      return false;
+	    point.x >= board.width || point.x < 0 ||
+	    point.y >= board.height || point.y < 0 ||
+	    !board.safeGrid()[point.x][point.y]) {
+      return false
     }
     return true
   }
@@ -472,7 +472,7 @@ function Board(w, h) {
     }
     return snakes
   }
- this.snakesForUpdate = function() {
+  this.snakesForUpdate = function() {
     var changed = {}
     for (var pid in board.players) {
       var snake = board.players[pid].snake
@@ -485,11 +485,11 @@ function Board(w, h) {
   this.newTail = function() {
     var safe = board.getSafeSpace()
     var ret =
-      {
-        x: safe.x,
-        y: safe.y,
-        d: 0
-      }
+        {
+          x: safe.x,
+          y: safe.y,
+          d: 0
+        }
     return ret
   }
   this.newHumanPlayer = function(socket) {
