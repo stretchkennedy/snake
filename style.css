@@ -1,147 +1,200 @@
 *, *:before, *:after {
-    -moz-box-sizing: border-box; 
-    -webkit-box-sizing: border-box; 
-    box-sizing: border-box;
-}
+               -moz-box-sizing: border-box;
+               -webkit-box-sizing: border-box;
+               box-sizing: border-box;
+             }
 
 html {
-    height: 100%;
+  height: 100%;
 }
 body {
-    min-height: 100%;
-    margin: 0px;
+  min-height: 100%;
+  margin: 0px;
+  background-color: black;
+  color: grey;
+}
+body.black {
+  background-color: black;
+}
+body.white {
+  background-color: white;
+}
+.green {
+  color: green;
+}
+.yellow {
+  color: yellow;
+}
+.red {
+  color: red;
+}
+body.white .contrast {
+  color: black;
+}
+body.black .contrast {
+  color: white;
+}
+body.white .instructions span.red,
+body.white .instructions span.green,
+body.white .instructions span.yellow {
+  background-color: black;
 }
 #name {
-    float: left;
-    width:100px;
-    padding-left:4px;
+  float: left;
+  width:100px;
+  padding-left:4px;
 }
 #kills {
-    float: right;
-    margin:0px;
-    padding-right:4px;
+  float: right;
+  margin:0px;
+  padding-right:4px;
 }
 #messageInputContainer {
-    float: left;
-    position: relative;
+  float: left;
+  position: relative;
 }
 .textbox {
-    margin:0px;
+  margin:0px;
 }
 #messageContainer {
-    float: left;
-    max-width: 240px;
-    height: 100%;
-    padding-bottom: 28px;
+  float: left;
+  max-width: 240px;
+  height: 100%;
+  padding-bottom: 40px;
 }
 @media (max-width: 440px) {
-    #messageContainer {
+  #messageContainer {
 	height: auto;
 	position: absolute;
 	top: 256px;
 	bottom: 0px;
-    }
+  }
 }
 #messageBox {
-    overflow-y:scroll;
-    height: 100%;
-    width:100%;
-    top: 0px;
-    bottom: 28px;
-    position: relative;
+  overflow-y:scroll;
+  height: 100%;
+  width:100%;
+  top: 0px;
+  bottom: 28px;
+  position: relative;
 }
 #messageInput {
-    width: 100%;
+  width: 100%;
 }
 #game {
-    z-index:0;
-    float:left;
-    position:relative;
+  z-index:0;
+  float:left;
+  position:relative;
 }
 #board .tile {
-    position:relative;
-    z-index:0;
-    background:black;
-    width:10px;
-    height:10px;
-    float:left;
-    border: 1px solid black;
+  position:relative;
+  z-index:0;
+  background:black;
+  width:10px;
+  height:10px;
+  float:left;
+  border: 1px solid black;
 }
 @media (max-width: 640px), (max-height: 428px) {
-    #board .tile {
-	width:5px;
-	height:5px;
-    }
-}
+                             #board .tile {
+	                           width:5px;
+	                           height:5px;
+                             }
+                           }
 @media (max-width: 200px), (max-height: 200px) {
-    #board .tile {
-	width: 2px;
-	height: 2px;
-	border: none;
-    }
-}
+                             #board .tile {
+	                           width: 2px;
+	                           height: 2px;
+	                           border: none;
+                             }
+                           }
 @media (min-width: 840px) and (min-height: 628px) {
-    #board .tile {
+  #board .tile {
 	width:15px;
 	height:15px;
-    }
+  }
 }
 @media (min-width: 1040px) and (min-height: 828px) {
-    #board .tile {
+  #board .tile {
 	width:20px;
 	height:20px;
-    }
+  }
 }
 #board .you {
-    z-index:30;
-    background:green;
+  z-index:30;
+  background:green;
 }
 #board .them {
-    z-index:20;
-    background:red;
+  z-index:20;
+  background:red;
 }
 #board .row {
-    clear:both;
+  clear:both;
 }
 #board .fruit {
-    z-index:10;
-    background:yellow;
-}
-body {
-    background:white;
+  z-index:10;
+  background:yellow;
 }
 p {
-    font:bold 18px arial;
-    padding:3px;
-    margin:0px;
+  font:bold 18px arial;
+  padding:3px;
+  margin:0px;
 }
 input[type="text"] {
-    font:bold 18px arial;
+  font:bold 18px arial;
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 3px;
+  margin: 4px;
+}
+body.black input[type="text"] {
+  color: white;
+  background-color: #333333;
+  border-color: dimgrey;
 }
 .message {
-    font:italic 14px arial;
-    color:grey;
+  font:italic 14px arial;
+  color:grey;
 }
 .container {
-    display:inline-block;
+  display:inline-block;
 }
 .menu {
-    position:absolute;
-    z-index:10;
+  position:absolute;
+  z-index:10;
 }
 .button {
-    margin:4px;
-    padding:4px;
-    border:2px solid black;
-    background:#333333;
-    color:#FFFFFF;
-    z-index:100;
-    float:left;
-    clear:both;
+  margin:4px;
+  padding:4px;
+  z-index:100;
+  float:left;
+  clear:both;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+body.black .button {
+  border:2px solid dimgrey;
+  background:#333333;
+  color: white;
+}
+body.white .button {
+  border:2px solid black;
+  background: white;
+  color: black;
 }
 .faded {
-    opacity:0.2;
+  opacity:0.2;
 }
 .clear {
-    clear: both;
+  clear: both;
+}
+.set-name {
+  clear: right;
+}
+.menu > *+* {
+  margin-top: 40px;
 }

@@ -2,7 +2,7 @@
   <head>
     <link rel="stylesheet" type="text/css" href="style.css"></link>
   </head>
-  <body>
+  <body class="black">
     <script src=/socket.io/socket.io.js></script>
     <script src=/jquery/jquery.min.js></script>
     <script src=/jquery/jquery.caret.js></script>
@@ -18,16 +18,27 @@
      var height = 0
 
      $(function() {
+
        $('#main').hide()
+
        $('#pick-name .set-name').click(function() {
 
          var name = $('#pick-name .name').val()
-         $('#name').val(name)
 
          $('#pick-name').hide()
          $('#main').show()
 
          socket.emit('name', { name: name })
+       })
+
+       $('.change-body').click(function() {
+         var body = $('body')
+         if (body.hasClass('white')) {
+           body.addClass('black').removeClass('white')
+         }
+         else {
+           body.addClass('white').removeClass('black')
+         }
        })
      })
 
@@ -84,8 +95,8 @@
          socket.emit('respawn')
        })
 
-       $('#name').change(function() {
-         socket.emit('rename', { name: name })
+       $('#name').blur(function() {
+         socket.emit('rename', { name: this.value })
        })
      }
 
@@ -111,7 +122,7 @@
      }
 
      function updateKD() {
-       $('#kills').html('<p>K/D: ' + kills + '/' + deaths + '</p>')
+       $('#kills p').html('K/D: ' + kills + '/' + deaths)
      }
 
      function addBoard() {
@@ -174,9 +185,17 @@
      }
 
      var messageBox;
-     function print(message) {
+     function print(message, contrast) {
        messageBox = messageBox || $('#messageBox')
-       $('<p class="message">' + message + '</p>').appendTo(messageBox);
+       if (contrast) {
+         var klass = 'message contrast'
+       }
+       else {
+         var klass = 'message'
+       }
+
+       $('<p class="' + klass + '">' + message + '</p>').appendTo(messageBox);
+
        messageBox[0].scrollTop = messageBox[0].scrollHeight
      }
 
@@ -307,7 +326,7 @@
        var mid = params['id']
        var name = names[mid] || mid
        var msg = params['m']
-       print('<b>' + name + '</b>: ' + msg)
+       print('<b>' + name + '</b>: ' + msg, true)
      })
      socket.on('disconnect', function(params) {
        unregisterKeys()
@@ -315,11 +334,22 @@
     </script>
     <div id="pick-name">
       <div class="menu">
-        <div class="inputContainer">
-          <input type="text" class="textbox name">
+        <div class="instructions">
+          <p>You are <span class="green">green</span>.</p>
+          <p>Enemies are <span class="red">red</span>.</p>
+          <p>Food is <span class="yellow">yellow</span>.</p>
+          <p>Use the <span class="contrast">arrow keys</span> to change direction.</p>
         </div>
-        <div class="button set-name">
-          <p>Choose name</p>
+        <div>
+          <div class="inputContainer">
+            <input type="text" class="textbox name" placeholder="name">
+          </div>
+          <div class="button set-name">
+            <p>Choose name and start</p>
+          </div>
+        </div>
+        <div class="button change-body">
+          <p>Toggle colour</p>
         </div>
       </div>
     </div>
@@ -327,6 +357,9 @@
       <div class="menu">
         <div class="respawn button">
           <p>Respawn</p>
+        </div>
+        <div class="button change-body">
+          <p>Toggle colour</p>
         </div>
       </div>
       <div id="game">
@@ -337,7 +370,7 @@
             <input type="text" class="textbox" id="name">
           </div>
           <div id="kills">
-            <p>Kills: 0</p>
+            <p class="contrast">K/D: 0/0</p>
           </div>
         </div>
       </div>
