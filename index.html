@@ -7,7 +7,7 @@
     <script src=jquery/jquery.min.js></script>
     <script src=jquery/jquery.caret.js></script>
     <script>
-     var socket = io.connect(location.protocol + '//' + location.host, {path: location.pathname})
+     var socket = io.connect(location.protocol + '//' + location.host, {resource: location.pathname})
      var id
      var snakes
      var names = {}
