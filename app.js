@@ -341,7 +341,7 @@ function HumanPlayer (board, socket) {
     player.snake.newDir(Number(params['d']))
   })
   this.socket.on('respawn', function (params) {
-    if(player.snake || !player.name()) return
+    if(player.snake || player.name() === undefined) return
     player.spawnSnake()
   })
   this.socket.on('disconnect', function (params) {
