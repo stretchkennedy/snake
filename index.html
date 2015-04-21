@@ -7,7 +7,8 @@
     <script src=jquery/jquery.min.js></script>
     <script src=jquery/jquery.caret.js></script>
     <script>
-     var socket = io.connect(location.protocol + '//' + location.host, {resource: location.pathname + "/socket.io/"})
+     var path = (location.pathname + "/socket.io/").replace(/\/+/g, "/").replace(/(^\/)|(\/$)/g, "")
+     var socket = io.connect(location.protocol + '//' + location.host, {resource: path})
      var id
      var snakes
      var names = {}
